@@ -37,4 +37,15 @@
 
 ### 远程发布
 
-本地验收通过，提交后通过GitHub Actions执行独立校验与Pages部署；远程结果在完成后补齐。
+- 功能代码提交：`45972be9d7549433b985c5a6d1c8ff782be52740`，已正常推送main。
+- 首次远程校验与部署：[Verify and publish #40165866749](https://github.com/loogg/tool-ethercat-config/actions/runs/40165866749)，verify、deploy均成功。远程重新执行npm ci、lint、测试、构建并发布本仓库Pages。
+- [公开站点](https://loogg.github.io/tool-ethercat-config/)返回HTTP 200；逐一下载全部25个公开文件，其SHA256均与已验收的Pages子路径构建一致。
+- 对提交后的源码重新构建，25个文件均与离线ZIP使用的dist一致；解压包独立启动后，首页与JavaScript返回HTTP 200，没有node_modules。
+- 线上首页、ESI懒加载页面及Entry/BitLen深链接均实际渲染正常，见[线上ESI字段截图](images/release-1.4.0-online.png)。
+- 线上浏览器的DOM/可访问性读取多次超时，改用同一浏览器的截图复查。完整交互回归以发布前相同子路径构建的结果为准，不把超时读取计为通过。
+
+### 交付位置与结论
+
+- 在线查阅：https://loogg.github.io/tool-ethercat-config/
+- v1.4.0版本与ZIP下载位置：https://github.com/loogg/tool-ethercat-config/releases/tag/v1.4.0
+- 用户要求的发布范围为本独立工具。运行内容、静态产物与界面验收通过，远程校验与Pages部署成功。未修改toolbox或其他工具仓库；没有进行硬件联调或完整XSD验证。
