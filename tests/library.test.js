@@ -31,8 +31,9 @@ test('relations expose both source and reverse dependency', () => {
   assert.equal(reverse.entry.id, 'size'); assert.equal(reverse.type, '被依赖'); assert.equal(reverse.incoming, true)
 })
 test('route handles invalid escapes and query filters', () => {
-  assert.equal(parseRoute('').id, 'ssc-overview')
-  assert.equal(parseRoute('').collection, 'SSC')
+  assert.equal(parseRoute('').view, 'home')
+  assert.equal(parseRoute('').id, '')
+  assert.equal(parseRoute('').collection, 'all')
   assert.equal(parseRoute('#/calculators/memory').id, 'memory')
   assert.equal(parseRoute('#/entry/%ZZ').id, 'ssc-overview')
   assert.equal(parseRoute('#/entry/size?q=PDO&source=SSC').source, 'SSC')
@@ -95,7 +96,7 @@ test('related and legacy deep links resolve to the actual entity, not a stale fi
   assert.equal(legacy.group, 'fields')
   const conceptual = resolveRoute(parseRoute('#/entry/rxpdo?collection=SSC&group=Application'), entryMap)
   assert.equal(conceptual.collection, 'concepts')
-  assert.equal(conceptual.group, '')
+  assert.equal(conceptual.group, 'process')
 })
 
 test('global search preserves query and selection while clearing inherited entity scope', () => {

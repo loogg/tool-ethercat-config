@@ -10,6 +10,7 @@ export default defineConfig({
   base: process.env.GITHUB_ACTIONS === 'true' && repository ? `/${repository}/` : './',
   define: { 'import.meta.env.APP_VERSION': JSON.stringify(pkg.version) },
   build: { rollupOptions: { output: { manualChunks(id) {
+    if (id.replaceAll('\\', '/').endsWith('/src/data/learning.js')) return 'learning-content'
     if (id.includes('node_modules')) {
       if (/@xyflow|@dagrejs|d3-|zustand/.test(id)) return 'graph-vendor'
       if (/react-dom|\/react\//.test(id.replaceAll('\\', '/'))) return 'react-vendor'

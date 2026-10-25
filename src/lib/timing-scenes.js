@@ -1,10 +1,12 @@
 import { watchdogTiming, watchdogScenarios } from './watchdog-timing.js'
+import { synchronizationLesson } from './learning-model.js'
 
 const SSC = { title: 'Beckhoff ET9300 · SSC V1.10', url: 'https://download.beckhoff.com/download/Document/io/ethercat-development-products/an_et9300_v1i10.pdf' }
 const ESC = { title: 'Beckhoff ESC · Technology §8.5 / §13', url: 'https://download.beckhoff.com/download/document/io/ethercat-development-products/ethercat_esc_datasheet_sec1_technology_v2.5.pdf' }
 const DRIVE = { title: 'TI · CiA402 drive example', url: 'https://software-dl.ti.com/processor-industrial-sw/esd/ind_comms_sdk/am243x/latest/docs/am243x/ethercat_subdevice/example2.html' }
 const field = (key, label, value, unit, extra = {}) => ({ key, label, value, unit, ...extra })
 export const timingLessons = {
+  'sync-latch': { title: 'SYNC 与 LATCH：事件与原始时间戳', subtitle: '对照同步输出、外部边沿捕获和应用稍后读取的时刻。', unit: 'µs', references: [ESC], fields: [field('period', 'SYNC0周期', 1000, 'µs', { min: 100, max: 10000 }), field('phase', 'SYNC1偏移', 250, 'µs', { max: 10000 }), field('latch', '外部边沿时刻', 650, 'µs', { max: 20000 }), field('latency', '应用读取延迟', 100, 'µs', { max: 10000 })], scenarios: [{ id: 'capture', label: '同步与边沿捕获' }], initialScenario: 'capture', scope: 'DC时刻的独立教学模型，不模拟真实寄存器、抖动或时间戳量化。LATCH通道、边沿和通知方式按ESC。SYNC1偏移小于周期是本例的展示条件。' },
   watchdog: { title: '看门狗：触发、倒计时与超时', subtitle: 'PDI 与 SM 共用时基，各自计数；沿同一时间轴对比。', unit: 'ms', references: [ESC, SSC], fields: [field('divider', 'Divider · 0x0400', 2498, '', { integer: true, max: 65535 }), field('pdiCount', 'PDI Count · 0x0410', 1000, '', { integer: true, max: 65535 }), field('smCount', 'SM Count · 0x0420', 1000, '', { integer: true, max: 65535 }), field('triggerInterval', '触发间隔', 20, 'ms', { min: .001 }), field('stopTime', '最后触发时间上限', 60, 'ms'), field('end', '观察窗口', 220, 'ms', { min: .001 })], scenarios: watchdogScenarios, initialScenario: 'pdi-stop', scope: '40 ns ESC 时基的标称教学模型。计数器量化和实际超时处理依 ESC / 固件；本图不是采样波形。' },
   cycle: { title: '周期预算与数据更新', subtitle: '一次周期中，输出处理、应用和输入准备占用多少时间。', unit: 'µs', references: [SSC], fields: [field('cycle', '周期预算', 1000, 'µs', { min: 1 }), field('output', '输出计算与拷贝', 120, 'µs'), field('application', '应用处理', 400, 'µs'), field('input', '输入计算与拷贝', 160, 'µs')], scenarios: [{ id: 'sm', label: 'SM 事件触发' }, { id: 'dc', label: 'DC SYNC0 触发' }], initialScenario: 'sm', scope: '串行执行顺序是本教学场景的假设，非所有 SSC 同步模式的固定调度。宏值 0 可能请求运行测量；这里的数值是独立教学输入。物理输出延迟不当作 CPU 拷贝时间相加。' },
   al: { title: 'AL 状态切换与等待条件', subtitle: '状态请求已到达，并不代表所有进入条件已经满足。', unit: 'ms', references: [SSC], fields: [field('timeout', '允许等待时间', 100, 'ms', { min: .01 }), field('ready', '应用就绪时间', 40, 'ms'), field('output', '首帧有效输出时间', 65, 'ms')], scenarios: [{ id: 'output', label: 'SAFEOP → OP · 需要输出' }, { id: 'no-output', label: 'SAFEOP → OP · 不等待输出' }, { id: 'preop', label: 'INIT → PREOP' }], initialScenario: 'output', scope: '简化 SSC 进入条件，演示请求、等待和超时；完整状态校验还包含 SM、同步和应用错误等条件。等待值示意，不代表通用默认值。' },
@@ -15,6 +17,7 @@ export const timingLessons = {
 }
 
 const lessonEntries = {
+  'sync-latch': ['sync-latch'],
   watchdog: ['esc-sm-wd-supported'],
   cycle: ['min-pd-cycle-time', 'max-pd-cycle-time', 'pd-output-calc-and-copy-time', 'pd-input-calc-and-copy-time', 'dc-supported', 'esi-dc', 'esi-assign-activate'],
   delay: ['pd-output-delay-time','pd-input-delay-time'],
@@ -125,12 +128,32 @@ function delayScene(p,scenario){
   return {end,initialTime:p.delay,events:[event('trigger','trigger',0,'相关触发到达','触发源取决于同步方式和硬件实现；本例设为观察起点。'),event('physical','physical',p.delay,label,`${address} 的 Delay Time 描述触发到本次物理事件的间隔；不生成等待代码。`,'green')],tracks:[{id:'trigger',name:'相关触发',caption:'t = 0 · 教学参考点',type:'pulse',pulses:[0]},{id:'physical',name:input?'物理输入事件':'物理输出事件',caption:`${address} · Delay Time`,type:'state',segments:[...(p.delay>0?[segment(0,p.delay,'物理链路进行中','gray')]:[]),segment(p.delay,end,input?'已采集 / 锁存':'输出已生效','green')]}],summary:`Delay Time = ${p.delay.toLocaleString()} ns · 相关触发 → ${input?'物理采集 / 锁存':'输出实际生效'}`,snapshot:time=>[{name:'观察结果',value:time<p.delay?'尚未到物理事件':label,tone:time<p.delay?'blue':'green',detail:`描述间隔 ${p.delay} ns；当前观察点 ${Number(time.toFixed(3))} ns。`},{name:'宏的作用',value:'描述，不自动补偿',detail:'不会把此数值当作 CPU 拷贝耗时加进周期预算。'}]}
 }
 
+function syncLatchScene(p) {
+  const model = synchronizationLesson(p)
+  const events = [
+    ...model.sync0.map((at, i) => event(`sync0-${i}`, 'sync0', at, 'SYNC0事件', `DC时刻${at}µs；周期${model.period}µs的教学触发。`)),
+    ...model.sync1.map((at, i) => event(`sync1-${i}`, 'sync1', at, 'SYNC1事件', `本例相对偏移${model.phase}µs，实际激活条件依ESC。`)),
+    event('latch-edge', 'latch', model.latch, '外部边沿到达并捕获时间戳', `ESC记录DC时间${model.captured}µs；后续应用读取不改变该值。`, 'green'),
+    event('application-read', 'application', model.readAt, '应用读取时间戳', `读取时刻${model.readAt}µs，读到的原始时间戳仍为${model.captured}µs。`),
+  ]
+  return { end: model.end, initialTime: model.latch, events, tracks: [
+    { id: 'sync0', name: 'SYNC0', caption: 'ESC → 应用 / 外设', type: 'pulse', pulses: model.sync0 },
+    { id: 'sync1', name: 'SYNC1', caption: `相对偏移${model.phase}µs`, type: 'pulse', pulses: model.sync1 },
+    { id: 'latch', name: 'LATCH边沿', caption: '外部 → ESC', type: 'pulse', pulses: [model.latch] },
+    { id: 'timestamp', name: '捕获时间戳', caption: 'ESC中的原始时刻', type: 'state', segments: [...(model.latch > 0 ? [segment(0, model.latch, '等待边沿', 'gray')] : []), segment(model.latch, model.end, `${model.captured} µs`, 'green')] },
+    { id: 'application', name: '应用读取', caption: `延后${model.latency}µs`, type: 'pulse', pulses: [model.readAt] },
+  ], summary: `周期${model.period}µs · 捕获${model.captured}µs → 读取${model.readAt}µs`, snapshot: time => [
+    { name: '捕获结果', value: time < model.latch ? '等待外部边沿' : `${model.captured} µs`, detail: '记录的是边沿发生时的DC时刻。', tone: time < model.latch ? 'blue' : 'green' },
+    { name: '应用侧', value: time < model.readAt ? '尚未读取' : '已读取原始时间戳', detail: `本例在${model.readAt}µs读取，不把它当成边沿时刻。` },
+  ] }
+}
+
 /** All numbers are teaching input. No scene writes to a controller. */
 export function buildTimingScene(id, input = {}, scenarioId) {
   const lesson=timingLessons[id]
   if(!lesson) throw new Error('不存在的时序模型。')
   const p=validate(lesson,input), scenario=lesson.scenarios.some(s=>s.id===scenarioId)?scenarioId:lesson.initialScenario
-  const scene=id==='watchdog'?watchdogScene(p,scenario):id==='cycle'?cycleScene(p,scenario):id==='al'?alScene(p,scenario):id==='sdo'?sdoScene(p,scenario):id==='buffer'?bufferScene(scenario):id==='delay'?delayScene(p,scenario):driveScene(scenario)
+  const scene=id==='watchdog'?watchdogScene(p,scenario):id==='cycle'?cycleScene(p,scenario):id==='al'?alScene(p,scenario):id==='sdo'?sdoScene(p,scenario):id==='buffer'?bufferScene(scenario):id==='delay'?delayScene(p,scenario):id==='sync-latch'?syncLatchScene(p):driveScene(scenario)
   scene.events.sort((a,b)=>a.at-b.at||a.id.localeCompare(b.id))
   return {...scene,id,lesson,parameters:p,scenario,checkpoints:[...new Set([0,...scene.events.map(e=>e.at),scene.end])].sort((a,b)=>a-b),eventAt:time=>lastAt(scene.events,time)}
 }

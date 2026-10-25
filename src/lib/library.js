@@ -67,10 +67,10 @@ export function parseRoute(hash) {
   let id
   try { id = decodeURIComponent(rawId || '') } catch { id = '' }
   const params = new URLSearchParams(query)
-  const supported = ['entry', 'search', 'calculators', 'saved', 'recent', 'about']
+  const supported = ['home', 'entry', 'search', 'calculators', 'saved', 'recent', 'about']
   const category = params.get('category') || 'all'
   const source = params.get('source') || 'all'
-  const resolvedView = supported.includes(view) ? view : 'entry'
+  const resolvedView = !view ? 'home' : supported.includes(view) ? view : 'entry'
   const collection = params.get('collection') || (resolvedView === 'entry' ? (id ? '' : 'SSC') : 'all')
   const knownCollection = collections.find(item => item.id === collection)
   const group = params.get('group') || ''
@@ -84,7 +84,7 @@ export function parseRoute(hash) {
     group: knownCollection && getCollectionGroups(knownCollection.id).some(item => item.id === group) ? group : '',
     category: categories.some(c => c.id === category) ? category : 'all',
     source: Object.hasOwn(sourceLabels, source) ? source : 'all',
-    ...Object.fromEntries(['workbook', 'sheet', 'row', 'field', 'appPane', 'esi', 'device', 'esiNode', 'esiAttr', 'esiPane'].filter(key => params.has(key)).map(key => [key, params.get(key)])),
+    ...Object.fromEntries(['workbook', 'sheet', 'row', 'field', 'appPane', 'esi', 'device', 'esiNode', 'esiAttr', 'esiPane', 'learnScene', 'learnStep', 'learnDir', 'learnData'].filter(key => params.has(key)).map(key => [key, params.get(key)])),
   }
 }
 
@@ -113,7 +113,7 @@ export function routeHash(route) {
   if (route.view === 'entry' && route.collection && route.collection !== 'all') params.set('collection', route.collection)
   if (route.view === 'entry' && route.group) params.set('group', route.group)
   if (['entry', 'search', 'saved', 'recent'].includes(route.view)) params.set('pane', route.pane === 'list' ? 'list' : 'detail')
-  if (['entry', 'search'].includes(route.view)) for (const key of ['workbook', 'sheet', 'row', 'field', 'appPane', 'esi', 'device', 'esiNode', 'esiAttr', 'esiPane']) if (route[key]) params.set(key, route[key])
+  if (['entry', 'search'].includes(route.view)) for (const key of ['workbook', 'sheet', 'row', 'field', 'appPane', 'esi', 'device', 'esiNode', 'esiAttr', 'esiPane', 'learnScene', 'learnStep', 'learnDir', 'learnData']) if (route[key] !== undefined && route[key] !== '') params.set(key, route[key])
   const query = params.size ? `?${params}` : ''
   return `#/${route.view}${route.id ? `/${encodeURIComponent(route.id)}` : ''}${query}`
 }

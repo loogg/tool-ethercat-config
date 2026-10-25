@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowLeft, Bookmark, Calculator, Check, ChevronRight, CircleHelp, Clock3, Command, FileCode2, Menu, Search, X } from 'lucide-react'
+import { ArrowLeft, Bookmark, BookOpen, Calculator, Check, ChevronRight, CircleHelp, Clock3, Command, FileCode2, Menu, Search, X } from 'lucide-react'
 import { entries, entryMap } from './data/index.js'
 import { collections } from './data/navigation.js'
 import { createSearchIndex, searchEntries, parseRoute, resolveRoute, routeHash, getEntryScope, getCollectionGroups, initialRecentList, readStoredList, writeStoredList, isEntryInScope } from './lib/library.js'
@@ -10,6 +10,10 @@ import { applicationColumns, applicationContext } from './lib/application-model.
 import Calculators from './components/Calculators.jsx'
 import { SourceBadge } from './components/Article.jsx'
 const EsiWorkbench = lazy(() => import('./components/EsiWorkbench.jsx'))
+const LearningWorkbench = lazy(() => import('./components/LearningWorkbench.jsx'))
+const HomeWorkspace = lazy(() => import('./components/HomeWorkspace.jsx'))
+import { ConceptHelpProvider, ConceptStrip } from './components/ConceptHelp.jsx'
+import { learningSearchContext } from './lib/learning-model.js'
 import { esiContext, decodeEsiBytes } from './lib/esi-context.js'
 import { parseEsiXml } from './lib/esi-model.js'
 import './graph-app.css'
@@ -39,8 +43,9 @@ export default function App() {
   const [navOpen, setNavOpen] = useState(false)
   const [sidebarHidden, setSidebarHidden] = useState(false)
   const [searchOpen, setSearchOpen] = useState(route.view === 'search')
+  const [searchBackground, setSearchBackground] = useState(() => currentRoute().view === 'entry' ? 'entry' : 'home')
   const [focusQuery, setFocusQuery] = useState('')
-  const [lastEntryId, setLastEntryId] = useState(() => entryMap.has(currentRoute().id) ? currentRoute().id : 'min-pd-cycle-time')
+  const [lastEntryId, setLastEntryId] = useState(() => entryMap.has(currentRoute().id) ? currentRoute().id : '')
   const [narrow, setNarrow] = useState(() => window.matchMedia('(max-width: 720px)').matches)
   const [feedback, setFeedback] = useState('')
   const [localEsi, setLocalEsi] = useState(null)
@@ -56,26 +61,26 @@ export default function App() {
     if (resolved.view === 'entry' && entryMap.has(resolved.id)) setLastEntryId(resolved.id)
     if (['entry', 'search', 'saved', 'recent'].includes(resolved.view)) remember(resolved.id)
   }, [remember])
-  const navigate = useCallback((id, query = '') => {
+  const navigate = useCallback((id, query = '', extra = {}) => {
     const target = entryMap.get(id)
-    setFocusQuery(query); setSearchOpen(false)
+    setFocusQuery(query); setSearchOpen(false); setSearchBackground('entry')
     const context = target?.collection === 'ESI' && route.esi ? { esi: route.esi, device: route.device } : {}
-    updateRoute({ view: 'entry', id, ...getEntryScope(target), query: '', ...context })
+    updateRoute({ view: 'entry', id, ...getEntryScope(target), query: '', ...context, ...learningSearchContext(id, query), ...extra })
   }, [updateRoute, route.esi, route.device])
-  function navigateView(view) { setSearchOpen(false); setFocusQuery(''); updateRoute({ view, id: view === 'calculators' ? 'mapping' : '', collection: 'all', group: '', query: '' }) }
+  function navigateView(view, calculatorId = 'mapping') { setSearchOpen(false); setFocusQuery(''); setSearchBackground(view === 'home' ? 'home' : 'entry'); updateRoute({ view, id: view === 'calculators' ? calculatorId : '', collection: 'all', group: '', query: '' }) }
   function selectCollection(id, group = '') {
     const collection = collections.find(c => c.id === id)
     const first = group ? entries.find(entry => !entry.overview && isEntryInScope(entry, { collection: id, group })) : entryMap.get(collection.overview)
     navigate(first?.id || 'ssc-compiler-overview')
   }
-  function changeQuery(value) { setSearchOpen(true); updateRoute({ ...route, view: 'search', id: '', collection: 'all', group: '', query: value }, route.view === 'search') }
+  function changeQuery(value) { if (route.view !== 'search') setSearchBackground(route.view === 'home' ? 'home' : 'entry'); setSearchOpen(true); updateRoute({ ...route, view: 'search', id: '', collection: 'all', group: '', query: value }, route.view === 'search') }
   function toggleSaved(id) {
     const next = saved.includes(id) ? saved.filter(v => v !== id) : [...saved, id]
     setSaved(next)
-    setFeedback(writeStoredList(SAVED_KEY, next) ? next.includes(id) ? '已收藏此配置' : '已取消收藏' : '浏览器存储不可用，本次收藏仍可使用。')
+    setFeedback(writeStoredList(SAVED_KEY, next) ? next.includes(id) ? '已收藏此条目' : '已取消收藏' : '浏览器存储不可用，本次收藏仍可使用。')
   }
   useEffect(() => {
-    function sync() { const next = currentRoute(); setRoute(next); setFocusQuery(''); setSearchOpen(next.view === 'search'); setNavOpen(false); if (next.view === 'entry' && entryMap.has(next.id)) setLastEntryId(next.id); if (['entry', 'saved', 'recent'].includes(next.view)) remember(next.id) }
+    function sync() { const next = currentRoute(); setRoute(next); setFocusQuery(''); setSearchOpen(next.view === 'search'); setSearchBackground(next.view === 'entry' ? 'entry' : next.view === 'search' && history.state?.atlasFrom && parseRoute(history.state.atlasFrom).view === 'entry' ? 'entry' : 'home'); setNavOpen(false); if (next.view === 'entry' && entryMap.has(next.id)) setLastEntryId(next.id); if (['entry', 'saved', 'recent'].includes(next.view)) remember(next.id) }
     window.addEventListener('popstate', sync); window.addEventListener('hashchange', sync)
     return () => { window.removeEventListener('popstate', sync); window.removeEventListener('hashchange', sync) }
   }, [remember])
@@ -85,13 +90,14 @@ export default function App() {
   useEffect(() => {
     function key(event) {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); setSearchOpen(true); searchRef.current?.focus() }
-      if (event.key === 'Escape') { setSearchOpen(false); setNavOpen(false) }
+      if (event.key === 'Escape') { if (event.target === searchRef.current) event.preventDefault(); setSearchOpen(false); setNavOpen(false) }
     }
     function outside(event) { if (searchContainer.current && !searchContainer.current.contains(event.target)) setSearchOpen(false) }
     window.addEventListener('keydown', key); document.addEventListener('pointerdown', outside)
     return () => { window.removeEventListener('keydown', key); document.removeEventListener('pointerdown', outside) }
   }, [])
-  const selected = entryMap.get(route.id) || (route.view === 'search' ? entryMap.get(lastEntryId) : undefined)
+  const selected = entryMap.get(route.id) || (route.view === 'search' && searchBackground === 'entry' ? entryMap.get(lastEntryId) : undefined)
+  const homeView = route.view === 'home' || (route.view === 'search' && searchBackground === 'home' && !route.id)
   const invalidEntry = route.view === 'entry' && route.id && !entryMap.has(route.id)
   const activeCollection = selected?.collection || (route.collection !== 'all' ? route.collection : '')
   const activeGroup = selected?.group || route.group || ''
@@ -127,20 +133,26 @@ export default function App() {
     setSearchOpen(false)
     updateRoute({ view: 'entry', id, ...getEntryScope(entryMap.get(id)), query: '', ...context })
   }
+  function updateLearningContext(change, replace = false) {
+    setSearchOpen(false)
+    updateRoute({ ...route, view: 'entry', id: selected.id, ...getEntryScope(selected), query: '', ...change }, replace)
+  }
+  function openLearningBinding(binding) { navigate(binding.entryId, '', binding.route) }
   const results = searchEntries(searchIndex, { query: route.query })
   const quickResults = route.query ? results : recent.slice(0, 8).map(id => entryMap.get(id)).filter(Boolean)
   const shelfResults = (route.view === 'saved' ? saved : recent).map(id => entryMap.get(id)).filter(Boolean)
   function toggleDirectory() { if (narrow) setNavOpen(!navOpen); else setSidebarHidden(!sidebarHidden) }
 
-  return <div className={`app graph-app ${navOpen ? 'nav-open' : ''} ${sidebarHidden ? 'sidebar-hidden' : ''}`}><a href="#main-content" className="skip-link" onClick={e => { e.preventDefault(); document.getElementById('main-content')?.focus() }}>跳到主要内容</a>
-    <header className="app-header"><button className="icon-button directory-trigger" aria-label={navOpen || !sidebarHidden ? '切换配置目录' : '展开配置目录'} aria-controls="app-sidebar" aria-expanded={narrow ? navOpen : !sidebarHidden} onClick={toggleDirectory}><Menu size={19} /></button><button className="brand" aria-label="EtherCAT Atlas 首页" onClick={() => navigate('ssc-overview')}><img src={`${import.meta.env.BASE_URL}favicon.svg`} width="28" height="28" alt="" /><span>EtherCAT <strong>Atlas</strong></span></button>
-      <div className="global-search" ref={searchContainer}><Search size={16} /><input ref={searchRef} aria-label="搜索配置或关联对象" type="search" value={route.query || ''} placeholder="搜索配置、对象索引或中文含义" onFocus={() => setSearchOpen(true)} onChange={e => changeQuery(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && quickResults.length) navigate(quickResults[0].id, route.query) }} />{route.query ? <button className="icon-button" aria-label="清除搜索" onClick={() => changeQuery('')}><X size={14} /></button> : <kbd>Ctrl K</kbd>}{searchOpen && <ResultList title={route.query ? '搜索全部资料' : '快速查找'} results={quickResults} query={route.query} onNavigate={navigate} onClose={() => setSearchOpen(false)} />}</div>
-      <nav className="graph-header-nav" aria-label="主导航"><button className={route.view === 'calculators' ? 'active' : ''} onClick={() => navigateView('calculators')}><Calculator size={17} /><span>计算工具</span></button><button aria-label="使用说明" className={route.view === 'about' ? 'active' : ''} onClick={() => navigateView('about')}><CircleHelp size={18} /></button></nav></header>
+  return <ConceptHelpProvider onNavigate={navigate} onBinding={openLearningBinding}><div className={`app graph-app ${navOpen ? 'nav-open' : ''} ${sidebarHidden ? 'sidebar-hidden' : ''}`}><a href="#main-content" className="skip-link" onClick={e => { e.preventDefault(); document.getElementById('main-content')?.focus() }}>跳到主要内容</a>
+    <header className="app-header"><button className="icon-button directory-trigger" aria-label={navOpen || !sidebarHidden ? '切换配置目录' : '展开配置目录'} aria-controls="app-sidebar" aria-expanded={narrow ? navOpen : !sidebarHidden} onClick={toggleDirectory}><Menu size={19} /></button><button className="brand" aria-label="EtherCAT Atlas 首页" onClick={() => navigateView('home')}><img src={`${import.meta.env.BASE_URL}favicon.svg`} width="28" height="28" alt="" /><span>EtherCAT <strong>Atlas</strong></span></button>
+      <div className="global-search" ref={searchContainer}><Search size={16} /><input ref={searchRef} aria-label="搜索配置或关联对象" role="searchbox" type="text" value={route.query || ''} placeholder="搜索配置、对象索引或中文含义" onFocus={() => setSearchOpen(true)} onChange={e => changeQuery(e.target.value)} onKeyDown={e => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); setSearchOpen(false); e.currentTarget.blur() } else if (e.key === 'Enter' && quickResults.length) navigate(quickResults[0].id, route.query) }} />{route.query ? <button className="icon-button" aria-label="清除搜索" onClick={() => changeQuery('')}><X size={14} /></button> : <kbd>Ctrl K</kbd>}{searchOpen && <ResultList title={route.query ? '搜索全部资料' : '快速查找'} results={quickResults} query={route.query} onNavigate={navigate} onClose={() => setSearchOpen(false)} />}</div>
+      <nav className="graph-header-nav" aria-label="主导航"><button className={activeCollection === 'concepts' ? 'active' : ''} onClick={() => navigate('learn-overview')} aria-label="基础概念"><BookOpen size={17} /><span>基础概念</span></button><button className={route.view === 'calculators' ? 'active' : ''} onClick={() => navigateView('calculators')}><Calculator size={17} /><span>计算工具</span></button><button aria-label="使用说明" className={route.view === 'about' ? 'active' : ''} onClick={() => navigateView('about')}><CircleHelp size={18} /></button></nav></header>
     {navOpen && <button className="nav-scrim" aria-label="关闭配置目录" onClick={() => setNavOpen(false)} />}
-    <aside className="app-sidebar" id="app-sidebar" aria-label="配置目录与工作台"><ConfigurationTree key={`${activeCollection}:${activeGroup}`} entries={entries} activeId={selected?.id} activeCollection={activeCollection} activeGroup={activeGroup} onNavigate={navigate} onOverview={selectCollection} applicationContext={appContext} onApplicationContext={updateApplicationContext} esiContext={esiCtx} onEsiContext={updateEsiContext} /><div className="tree-workbench"><button className={route.view === 'saved' ? 'active' : ''} onClick={() => navigateView('saved')}><Bookmark size={15} />我的收藏<small>{saved.length}</small></button><button className={route.view === 'recent' ? 'active' : ''} onClick={() => navigateView('recent')}><Clock3 size={15} />最近查阅<small>{recent.length}</small></button><div className="tree-local"><span />浏览器本地查阅 <small>v{import.meta.env.APP_VERSION}</small></div></div></aside>
+    <aside className="app-sidebar" id="app-sidebar" aria-label="配置目录与工作台"><ConfigurationTree key={`${activeCollection}:${activeGroup}`} isHome={homeView} onHome={() => navigateView('home')} entries={entries} activeId={selected?.id} activeCollection={activeCollection} activeGroup={activeGroup} onNavigate={navigate} onOverview={selectCollection} applicationContext={appContext} onApplicationContext={updateApplicationContext} esiContext={esiCtx} onEsiContext={updateEsiContext} /><div className="tree-workbench"><button className={route.view === 'saved' ? 'active' : ''} onClick={() => navigateView('saved')}><Bookmark size={15} />我的收藏<small>{saved.length}</small></button><button className={route.view === 'recent' ? 'active' : ''} onClick={() => navigateView('recent')}><Clock3 size={15} />最近查阅<small>{recent.length}</small></button><div className="tree-local"><span />浏览器本地查阅 <small>v{import.meta.env.APP_VERSION}</small></div></div></aside>
     <main id="main-content" className="main-content graph-main-content" tabIndex={-1}>
-      <div className="compact-contextbar"><button className="icon-button" aria-label="返回上一处" onClick={() => history.back()}><ArrowLeft size={16} /></button>{collection && selected ? <><button onClick={() => selectCollection(collection.id)}>{collection.label}</button>{activeGroup && <><ChevronRight size={12} /><span>{activeGroup === 'Application/ProcessData' ? 'Application / ProcessData' : group?.label}</span></>}</> : <span>{route.view === 'calculators' ? '计算工具' : route.view === 'saved' ? '我的收藏' : route.view === 'recent' ? '最近查阅' : route.view === 'about' ? '使用说明' : '全局搜索'}</span>}<span className="contextbar-end">配置 · 关系 · 计算</span></div>
-      {invalidEntry ? <div className="compact-empty"><Search size={28} /><h1>未找到这个配置</h1><p>链接中的标识可能有误，可以搜索配置名或回到配置目录。</p><button className="primary-button" onClick={() => navigate('ssc-overview')}>回到配置查阅</button></div> : selected?.collection === 'ESI' && route.view !== 'calculators' ? <Suspense fallback={<div className="esi-loading" role="status">正在打开 ESI 条目…</div>}><EsiWorkbench key={esiCtx.documentId + esiCtx.scope?.device.id + selected.id} context={esiCtx} entry={selected} onContext={updateEsiContext} onFile={openEsiFile} onReference={openEsiReference} error={esiError} onFeedback={setFeedback} onNavigate={navigate} /></Suspense> : selected?.collection === 'APP' && route.view !== 'calculators' ? <ApplicationDefinition key={`${appContext.workbook.id}:${appContext.sheet.id}`} context={appContext} entry={selected} entries={entries} onContext={updateApplicationContext} onNavigate={navigate} saved={saved.includes(selected.id)} onSave={toggleSaved} onFeedback={setFeedback} /> : selected && route.view !== 'calculators' && !selected.overview ? <ConfigGraph key={`${selected.id}:${focusQuery}`} entry={selected} entries={entries} onNavigate={navigate} saved={saved.includes(selected.id)} onSave={toggleSaved} onFeedback={setFeedback} highlightQuery={focusQuery} /> : selected?.overview && !selected.group ? <CollectionHome collection={collection} onNavigate={navigate} onGroup={selectCollection} /> : selected?.overview ? <div className="group-note"><FileCode2 size={24} /><h1>{selected.title}</h1><p>{selected.summary}</p><ul>{selected.details?.map((text, i) => <li key={i}>{text}</li>)}</ul><div>{selected.references?.map((ref, i) => <a key={i} href={ref.url} target="_blank" rel="noreferrer">{ref.title}</a>)}</div></div> : route.view === 'calculators' ? <div className="standalone-calculators"><Calculators key={route.id} initialTool={route.id || 'mapping'} onNavigate={navigate} /></div> : ['saved', 'recent'].includes(route.view) ? <div className="shelf-page"><h1>{route.view === 'saved' ? '我的收藏' : '最近查阅'}</h1><ResultList title={route.view === 'saved' ? '收藏配置' : '阅读记录'} results={shelfResults} onNavigate={navigate} /></div> : route.view === 'about' ? <div className="graph-about"><h1>从配置出发，沿关系查阅。</h1><div><section><h2>找配置</h2><p>SSC Tool 与 ESI 按分组查阅；应用对象字典按工作簿与工作表查阅，选择单元格阅读字段说明。全局搜索也支持对象索引，找到相关配置后会高亮图中端点。</p></section><section><h2>读关系</h2><p>节点内保留父级路径。实线箭头表示有向关系，虚线表示描述或对应。点击节点查看要点，点击连线查看条件与依据。</p></section><section><h2>调整视图</h2><p>自动方向会根据图的层数及可用空间选择横向或纵向。可手动切换、缩放、定位当前项；“列表”提供可按键盘阅读的关系。</p></section><section><h2>验证理解</h2><p>演算区只改变本地示例，数字会同步到图中；完整计算工具支持映射、位布局、内存、看门狗和控制字节。</p></section></div><p className="graph-about-footer">知识与计算随应用提供，收藏和阅读记录仅保存在当前浏览器。示例、默认描述与在线配置分别表达。</p></div> : <div className="search-page"><ResultList title="全部搜索结果" results={results} query={route.query} onNavigate={navigate} /></div>}
+      <div className="compact-contextbar"><button className="icon-button" aria-label="返回上一处" onClick={() => history.back()}><ArrowLeft size={16} /></button>{collection && selected ? <><button onClick={() => selectCollection(collection.id)}>{collection.label}</button>{activeGroup && <><ChevronRight size={12} /><span>{activeGroup === 'Application/ProcessData' ? 'Application / ProcessData' : group?.label}</span></>}</> : <span>{homeView ? '首页' : route.view === 'calculators' ? '计算工具' : route.view === 'saved' ? '我的收藏' : route.view === 'recent' ? '最近查阅' : route.view === 'about' ? '使用说明' : '全局搜索'}</span>}<span className="contextbar-end">配置 · 关系 · 计算</span></div>
+      {selected && !selected.overview && selected.collection !== 'concepts' && <ConceptStrip entry={selected} />}
+      {invalidEntry ? <div className="compact-empty"><Search size={28} /><h1>未找到这个配置</h1><p>链接中的标识可能有误，可以搜索配置名或回到配置目录。</p><button className="primary-button" onClick={() => navigateView('home')}>回到首页</button></div> : homeView ? <Suspense fallback={<div className="esi-loading" role="status">正在打开首页…</div>}><HomeWorkspace entries={entries} recent={recent} onNavigate={navigate} onCalculator={id => navigateView('calculators', id)} onRecent={() => navigateView('recent')} /></Suspense> : selected?.collection === 'concepts' && route.view !== 'calculators' ? <Suspense fallback={<div className="esi-loading" role="status">正在打开基础概念…</div>}><LearningWorkbench key={selected.id} entry={selected} entries={entries} route={route} onContext={updateLearningContext} onNavigate={navigate} onBinding={openLearningBinding} saved={saved.includes(selected.id)} onSave={toggleSaved} onFeedback={setFeedback} /></Suspense> : selected?.collection === 'ESI' && route.view !== 'calculators' ? <Suspense fallback={<div className="esi-loading" role="status">正在打开 ESI 条目…</div>}><EsiWorkbench key={esiCtx.documentId + esiCtx.scope?.device.id + selected.id} context={esiCtx} entry={selected} onContext={updateEsiContext} onFile={openEsiFile} onReference={openEsiReference} error={esiError} onFeedback={setFeedback} onNavigate={navigate} /></Suspense> : selected?.collection === 'APP' && route.view !== 'calculators' ? <ApplicationDefinition key={`${appContext.workbook.id}:${appContext.sheet.id}`} context={appContext} entry={selected} entries={entries} onContext={updateApplicationContext} onNavigate={navigate} saved={saved.includes(selected.id)} onSave={toggleSaved} onFeedback={setFeedback} /> : selected && route.view !== 'calculators' && !selected.overview ? <ConfigGraph key={`${selected.id}:${focusQuery}`} entry={selected} entries={entries} onNavigate={navigate} saved={saved.includes(selected.id)} onSave={toggleSaved} onFeedback={setFeedback} highlightQuery={focusQuery} /> : selected?.overview && !selected.group ? <CollectionHome collection={collection} onNavigate={navigate} onGroup={selectCollection} /> : selected?.overview ? <div className="group-note"><FileCode2 size={24} /><h1>{selected.title}</h1><p>{selected.summary}</p><ul>{selected.details?.map((text, i) => <li key={i}>{text}</li>)}</ul><div>{selected.references?.map((ref, i) => <a key={i} href={ref.url} target="_blank" rel="noreferrer">{ref.title}</a>)}</div></div> : route.view === 'calculators' ? <div className="standalone-calculators"><Calculators key={route.id} initialTool={route.id || 'mapping'} onNavigate={navigate} /></div> : ['saved', 'recent'].includes(route.view) ? <div className="shelf-page"><h1>{route.view === 'saved' ? '我的收藏' : '最近查阅'}</h1><ResultList title={route.view === 'saved' ? '收藏配置' : '阅读记录'} results={shelfResults} onNavigate={navigate} /></div> : route.view === 'about' ? <div className="graph-about"><h1>从配置出发，沿关系查阅。</h1><div><section><h2>找配置</h2><p>SSC Tool 与 ESI 按分组查阅；应用对象字典按工作簿与工作表查阅，选择单元格阅读字段说明。全局搜索也支持对象索引，找到相关配置后会高亮图中端点。</p></section><section><h2>读关系</h2><p>节点内保留父级路径。实线箭头表示有向关系，虚线表示描述或对应。点击节点查看要点，点击连线查看条件与依据。</p></section><section><h2>调整视图</h2><p>自动方向会根据图的层数及可用空间选择横向或纵向。可手动切换、缩放、定位当前项；“列表”提供可按键盘阅读的关系。</p></section><section><h2>验证理解</h2><p>演算区只改变本地示例，数字会同步到图中；完整计算工具支持映射、位布局、内存、看门狗和控制字节。</p></section></div><p className="graph-about-footer">知识与计算随应用提供，收藏和阅读记录仅保存在当前浏览器。示例、默认描述与在线配置分别表达。</p></div> : <div className="search-page"><ResultList title="全部搜索结果" results={results} query={route.query} onNavigate={navigate} /></div>}
     </main><div className={`toast ${feedback ? 'visible' : ''}`} role="status">{feedback}</div>
-  </div>
+  </div></ConceptHelpProvider>
 }

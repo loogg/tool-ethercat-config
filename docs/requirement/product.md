@@ -42,3 +42,12 @@
 - 以当前配置的节点连线图表达关系。相关应用定义与ESI字段要在节点内显示父级位置，连线要指出引用、初始化、计算、约束等含义。
 - 内容以短说明、结构化取值和必要条件为主；不再用多段重复长文承担主要查阅任务。
 - 本轮先完成模型图、现状评估及参考案例，见 docs/architecture/configuration-graph-model.md、docs/ui-prototype/graph-reference-cases.md；图式实现的预设验收记录在 docs/acceptance/graph-redesign-review.md。
+
+
+## v1.5 用户补充：首页与基础概念优先
+
+2026-10-25，用户明确要求基础概念位于导航最上方，首次进入应有独立首页。此要求取代此前“空入口默认SSC概览”的约定；显式SSC概览和其他历史深链接保留原目标。
+
+首页按任务分流，依次提供基础概念、SSC Tool、应用对象字典、ESI四个主入口，下面使用真实主题、计算器和本地最近记录。知识定义仍归概念/配置模型，首页只引用稳定目标。不增加大幅欢迎留白、重复搜索或伪设备数据。
+
+概念按短定义、场景、可视模型、配置对应和依据组织；实现与当前验收见[本轮验收](../acceptance/concept-learning.md)，技术架构见[展示模型](../architecture/concept-learning.md)。

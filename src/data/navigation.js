@@ -1,3 +1,5 @@
+import { learningTopics } from './learning.js'
+
 // A collection describes a real configuration surface. Cross-references do not
 // change an article's home: conceptual articles remain in 基础概念.
 export const collections = [
@@ -32,8 +34,8 @@ export const collections = [
     ],
   },
   {
-    id: 'concepts', label: '基础概念', shortLabel: '基础概念', overview: 'object-dictionary',
-    description: '理解对象字典、PDO、SM、同步和状态之间的机制与关系。', groups: [],
+    id: 'concepts', label: '基础概念', shortLabel: '基础概念', overview: 'learn-overview',
+    description: '从通信角色出发，分步理解对象、数据通路、同步、状态与启动。', groups: learningTopics.map(topic => ({ id: topic.id, label: topic.title })),
   },
 ]
 
