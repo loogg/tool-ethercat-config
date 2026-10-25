@@ -1,0 +1,32 @@
+.esi-navigation{padding:5px 0 0 9px}
+.esi-tree-caption{display:flex;gap:6px;align-items:center;font-size:9px;color:#91a0b4;margin:6px 0 12px}
+.esi-tree-branch{min-width:0}
+.esi-tree-row{display:flex;align-items:center;min-height:32px;border-radius:4px}
+.esi-tree-row:hover{background:#edf2fa}
+.esi-tree-row.selected{background:#e7effd}
+.esi-tree-fold{display:flex;align-items:center;justify-content:center;width:17px;min-width:17px;height:28px;padding:0;color:#8b9db6}
+.esi-tree-select{display:flex;align-items:baseline;gap:6px;flex:1;min-width:0;text-align:left;padding:7px 4px;font:10px/1.5 var(--mono);color:#5d779b}
+.esi-tree-row.selected .esi-tree-select{color:#2d62b0}
+.esi-tree-select>span{flex-shrink:0}
+.esi-tree-select>small{font:9px/1.5 var(--font);color:#8a9bb2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.esi-tree-select{font-size:11px}
+.esi-tree-select>small{font-size:10px}
+.esi-nav-mode { display:flex; align-items:center; border-bottom:1px solid #e2e8f1; padding:3px 0 9px; gap:5px; margin-bottom:7px; }
+.esi-nav-mode > button { display:flex; gap:4px; align-items:center; color:#8195b0; font-size:10px; border-radius:3px; padding:5px 7px; }
+.esi-nav-mode > button[aria-pressed=true] { background:#eaf1fc; color:#4977b3; }
+.esi-device-home { display:flex; align-items:center; gap:7px; padding:10px 8px; width:100%; text-align:left; border-radius:4px; margin:3px 0 8px; color:#526f95; }
+.esi-device-home > span { font-size:11px; line-height:1.6; min-width:0; overflow-wrap:anywhere; }
+.esi-device-home small { display:block; font-size:9px; color:#92a1b6; margin-top:2px; }
+.esi-device-home.selected { background:#edf3fd; }
+.esi-nav-owner { color:#7c92af; font-size:9px; line-height:1.8; margin:8px 0; }
+.esi-nav-group { border-left:1px solid #e4e9f1; padding-left:4px; margin-left:4px; }
+.esi-nav-items { padding:0 0 7px 12px; }
+.esi-nav-items > div > button { width:100%; display:flex; flex-direction:column; gap:3px; color:#5c799e; text-align:left; border-radius:4px; padding:8px 8px; }
+.esi-nav-items > div > button > span { font-size:11px; line-height:1.6; overflow-wrap:anywhere; }
+.esi-nav-items > div > button > small { font:9px/1.7 var(--mono); color:#94a5bc; overflow-wrap:anywhere; }
+.esi-nav-items button.selected { background:#e7f0ff; color:#356fb9; }
+.esi-nav-items button:hover { background:#eff4fc; }
+.esi-nav-entries { padding-left:10px; }
+.esi-nav-entries > button { display:block; width:100%; border-radius:3px; color:#7d94b1; text-align:left; font-size:10px; line-height:1.8; padding:6px; overflow-wrap:anywhere; }
+
+.esi-nav-catalog { display:block; padding:6px 8px; font-size:10px; color:#7f9abc; text-align:left; }

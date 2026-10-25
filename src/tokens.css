@@ -1,0 +1,13 @@
+:root {
+  --font: 'DM Sans', 'Microsoft YaHei', 'PingFang SC', 'Noto Sans CJK SC', sans-serif;
+  --mono: 'Cascadia Code', 'SFMono-Regular', Consolas, 'Liberation Mono', 'Microsoft YaHei', 'PingFang SC', monospace;
+  --canvas: #fcfcfc;
+  --surface: #ffffff;
+  --soft: #f3f5f8;
+  --line: #e5e8ed;
+  --text: #202c3d;
+  --muted: #5f6f83;
+  --blue: #2563eb;
+  --blue-soft: #edf3ff;
+  --radius: 8px;
+}

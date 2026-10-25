@@ -1,0 +1,68 @@
+@startuml
+left to right direction
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+
+abstract class "DomainNode\n图节点" as DomainNode {
+  id
+  title
+  shortSummary
+  nodeKind
+}
+class "ConfigField\n可配置字段" as ConfigField {
+  key
+  dataType
+  unit
+  allowedValues
+}
+class "SourcePosition\n来源位置" as SourcePosition {
+  artifactKind
+  parentPath
+  selector
+  versionScope
+}
+class "CoEObject\nCoE对象" as CoEObject {
+  index
+}
+class "CoESubentry\nCoE子项" as CoESubentry {
+  subIndex
+  dataType
+  unit
+}
+class "RegisterField\n寄存器字段" as RegisterField {
+  address
+  bitRange
+  hardwareScope
+}
+class "CalculationRule\n计算规则" as CalculationRule {
+  expression
+  inputBindings
+  outputBindings
+  assumptions
+}
+class "Relation\n有条件的工程关系" as Relation {
+  fromNodeId
+  toNodeId
+  relationKind
+  condition
+}
+class "Evidence\n技术依据" as Evidence {
+  url
+  section
+  applicability
+}
+DomainNode <|-- ConfigField
+DomainNode <|-- CoEObject
+DomainNode <|-- CoESubentry
+DomainNode <|-- RegisterField
+DomainNode <|-- CalculationRule
+DomainNode "1" *-- "0..*" SourcePosition : locatedAt
+CoEObject "1" *-- "0..*" CoESubentry : contains
+Relation "*" --> "1" DomainNode : source
+Relation "*" --> "1" DomainNode : target
+Relation "*" --> "1..*" Evidence : supportedBy
+note bottom of ConfigField
+  主配置目录仅展示这一类节点。
+  关联端点在选中配置的局部图中出现。
+end note
+@enduml

@@ -1,0 +1,65 @@
+import { Fragment, useEffect, useRef, useState } from 'react'
+import { ArrowRight, BookOpen, ChevronRight, Code2, GitBranch, Info, Play, X } from 'lucide-react'
+import { esiFieldRule } from '../data/esi-field-rules.js'
+import { child, children, esiHex, esiNumber, text } from '../lib/esi-model.js'
+import { decodeSmControl } from '../lib/calculations.js'
+import { esiBreadcrumbs, esiDisplayMatch, esiEntity, esiFieldRows, esiItemAssociations, esiItemBrief, esiItemScopeLabel, esiItemTitle, esiSelectedRow, esiSubIndexLabel } from '../lib/esi-display-model.js'
+import EsiFieldRelationGraph from './EsiFieldRelationGraph.jsx'
+
+const surfaces={SSC:'SSC Tool',APP:'应用定义',ESC:'ESC',CoE:'CoE'}
+const rowValue=r=>r.container?r.value:r.raw===undefined||r.raw===null?'未声明':r.raw===''?'空文本':String(r.raw)
+function ValueBreakdown({row}){
+  const raw=esiNumber(row.raw)
+  if(row.presenter==='bitfield'&&raw!==null&&raw<=255){
+    const decoded=decodeSmControl(raw)
+    return <section className="esi-value-breakdown"><div className="esi-value-bit-grid">{decoded.bits.map(bit=><span key={bit.bit} className={bit.value?'set':''}><small>{bit.bit}</small><b>{bit.value}</b></span>)}</div><div className="esi-value-bit-labels"><span>1:0 · {decoded.modeLabel}</span><span>3:2 · {decoded.directionLabel}</span><span>6 · {decoded.watchdogTrigger?'允许刷新 SM 看门狗':'不触发 SM 看门狗'}</span></div>{decoded.warnings.length>0&&<small>{decoded.warnings.join(' ')}</small>}</section>
+  }
+  if(row.presenter==='index'&&raw!==null&&raw<=65535)return <section className="esi-index-value"><span><small>Index 高字节 · 15:8</small><code>{esiHex(raw>>8,2)}</code></span><span><small>Index 低字节 · 7:0</small><code>{esiHex(raw&255,2)}</code></span><small>两个字节组成 16 bit Index；SubIndex 是独立字段。</small></section>
+  return null
+}
+function CurrentFileReference({context,entity,onLocate}){
+  const object=context.ownerScope?.objects.find(o=>o.id===entity.id)
+  const type=object?.datatype||(entity.name==='SubItem'?context.ownerScope?.typeMap.get(text(entity,'Type')):null)
+  if(type)return <div className="esi-file-reference"><span className="esi-reference-status">当前 XML 类型引用</span><button onClick={()=>onLocate(type.id)}>{text(type,'Name')}<ArrowRight size={12}/></button><small>当前字典作用域</small></div>
+  const entry=context.ownerScope?.pdos.flatMap(p=>p.entries).find(e=>entity.id===e.id)
+  if(!entry)return null
+  if(entry.padding)return <div className="esi-file-reference"><Info size={13}/>当前文件：Index = 0，填充位不引用字典对象。</div>
+  if(!entry.object)return <div className="esi-file-reference unresolved"><Info size={13}/>当前作用域未解析到对应字典对象，可能需要外部字典。</div>
+  return <div className="esi-file-reference"><span className="esi-reference-status">当前 XML 引用</span><button onClick={()=>onLocate(entry.member?.node.id||entry.object.id)}><code>{esiHex(entry.index)}:{esiSubIndexLabel(entry.subIndex)}</code>{entry.member?.name||entry.object.name}<ArrowRight size={12}/></button><small>{entry.resolved?'已解析到当前作用域':'对象已找到，成员未展开'}</small></div>
+}
+function InlineFieldDetails({row,context,entity,onClose,onLocate,onReference,onSource,onTiming,sourceFilter}){
+  const [graph,setGraph]=useState(false)
+  const rule=row.rule,targets=row.associations.filter(t=>!sourceFilter||t.surface===sourceFilter)
+  const graphRow=sourceFilter?{...row,associations:targets}:row
+  return <section className="esi-field-expansion" aria-label={`${row.label} 的说明与关联`} onKeyDown={e=>{if(e.key==='Escape'){e.stopPropagation();onClose()}}}><header><strong>{row.title||row.label}</strong><span>{row.unit||''}{row.line?` · XML L${row.line}`:''}</span><button className="icon-button" aria-label="收起当前字段" onClick={onClose}><X size={15}/></button></header><p className="esi-field-purpose">{rule.meaning}</p><ValueBreakdown row={row}/><div className="esi-inline-writing"><span>写法</span><p>{rule.syntax}</p>{rule.examples.slice(0,5).map(v=><code key={v}>{v}</code>)}</div><CurrentFileReference context={context} entity={entity} onLocate={onLocate}/>{targets.length>0&&<div className="esi-field-targets"><div className="esi-inline-section-label">SSC / 应用定义 · 字段规则</div>{targets.map(t=><button key={t.id} className="esi-field-target" onClick={()=>onReference(t)}><small>{surfaces[t.surface]||t.surface}</small><strong>{t.title}</strong><span>{t.path}</span><ArrowRight size={13}/></button>)}</div>}<div className="esi-field-actions">{targets.length>0&&<button aria-expanded={graph} onClick={()=>setGraph(!graph)}><GitBranch size={13}/>{graph?'收起局部关系图':'展开局部关系图'}</button>}<button onClick={()=>onSource(row.node)}><Code2 size={13}/>XML 原文</button>{rule.lesson&&<button onClick={()=>onTiming(rule.lesson)}><Play size={13}/>交互时序</button>}<details><summary><BookOpen size={12}/>依据与范围</summary><p>{rule.scope}</p>{rule.references.map(ref=><a key={ref.url} href={ref.url} target="_blank" rel="noreferrer">{ref.title}</a>)}</details></div>{graph&&<EsiFieldRelationGraph row={graphRow} context={context} onReference={onReference}/>}</section>
+}
+function Members({entity,context,onLocate}){
+  const object=context.ownerScope?.objects.find(o=>o.id===entity.id)
+  const datatype=entity.name==='DataType'?entity:object?.datatype
+  const members=children(datatype,'SubItem')
+  if(!members.length)return null
+  return <section className="esi-item-members"><div className="esi-sheet-section"><strong>类型成员</strong><span>{datatype&&text(datatype,'Name')} · 字典布局</span></div><div className="esi-table-scroll"><table className="esi-table"><thead><tr><th>SI</th><th>成员</th><th>类型</th><th>BitSize</th><th>字典 BitOffs</th><th>Access</th></tr></thead><tbody>{members.map(n=><tr key={n.id}><td><button onClick={()=>onLocate(n.id)}>{text(n,'SubIdx')||'未展开'}</button></td><td>{text(n,'Name')||'—'}</td><td>{text(n,'Type')||'—'}</td><td>{text(n,'BitSize')||'—'}</td><td>{text(n,'BitOffs')||'—'}</td><td>{text(child(n,'Flags'),'Access')||'未声明'}</td></tr>)}</tbody></table></div><p className="esi-inline-footnote">BitOffs 属于字典类型；PDO 位偏移与 SSC 本地内存布局分别核对。</p></section>
+}
+function PdoEntries({entity,context,onLocate}){
+  const pdo=context.ownerScope?.pdos.find(p=>p.id===entity.id)
+  if(!pdo)return null
+  return <section className="esi-item-members"><div className="esi-sheet-section"><strong>Entry 映射项</strong><span>{pdo.direction==='Rx'?'主站 → 从站':'从站 → 主站'} · 本 PDO 描述 {pdo.bits??'?'} bit</span></div><div className="esi-table-scroll"><table className="esi-table"><thead><tr><th>Index : SI</th><th>名称</th><th>协议类型</th><th>BitLen</th><th>PDO 位偏移</th><th>字典引用</th></tr></thead><tbody>{pdo.entries.map(e=><tr key={e.id}><td><button onClick={()=>onLocate(e.id)}><code>{esiHex(e.index)}:{esiSubIndexLabel(e.subIndex)}</code></button></td><td>{e.name||(e.padding?'Padding':'—')}</td><td>{e.type||'—'}</td><td><button onClick={()=>onLocate(child(e.node,'BitLen')?.id||e.id)}>{e.bits??'未解析'}</button></td><td>{e.offset??'未解析'}</td><td>{e.padding?'填充':e.object?<button onClick={()=>onLocate(e.member?.node.id||e.object.id)}>{e.resolved?'已解析':'成员未展开'}<ArrowRight size={11}/></button>:'当前作用域未解析'}</td></tr>)}</tbody></table></div><p className="esi-inline-footnote">这是可用 PDO 描述。确认活动 Mapping / Assignment 后，才计算活动长度与 SSC 容量约束。</p></section>
+}
+
+export default function EsiItemSheet({context,onLocate,onReference,onSource,onTiming,onFileReferences}){
+  const entity=esiEntity(context),title=esiItemTitle(entity,context)
+  const rows=esiFieldRows(context,entity)
+  const [hidden,setHidden]=useState(''),[filter,setFilter]=useState(''),[source,setSource]=useState(null),[itemLinks,setItemLinks]=useState(context.mode==='cross'&&!esiSelectedRow(context,rows))
+  const [sourceKey,setSourceKey]=useState(null)
+  const selected=esiSelectedRow(context,rows),expanded=selected&&hidden!==selected.key?selected:null
+  const activeSource=sourceKey===selected?.key?source:null
+  const selectedRow=useRef(null),selectedToggle=useRef(null),itemToggle=useRef(null)
+  useEffect(()=>{const frame=requestAnimationFrame(()=>selectedRow.current?.scrollIntoView({block:'nearest'}));return()=>cancelAnimationFrame(frame)},[context.node.id,context.attribute])
+  const breadcrumbs=esiBreadcrumbs(context,entity),itemTargets=esiItemAssociations(context,entity)
+  const visible=rows.filter(r=>esiDisplayMatch([r.label,r.raw,r.value,r.title].join(' '),filter))
+  function select(row,surface=null){setSourceKey(row.key);setSource(expanded?.key===row.key&&activeSource===surface?null:surface);setHidden('');onLocate(row.node.id,row.attribute)}
+  function collapse(){selectedToggle.current?.focus({preventScroll:true});if(selected)setHidden(selected.key)}
+  const rule=esiFieldRule(entity),brief=esiItemBrief(context,entity)
+  const itemRow={key:entity.id,node:entity,label:title,title:'当前条目的关联',value:title,raw:entity.value,rule,associations:itemTargets,unit:'',presenter:'plain'}
+  return <section className="esi-item-sheet" aria-label="ESI 条目工作页"><nav className="esi-item-breadcrumbs" aria-label="ESI 当前项路径">{breadcrumbs.map((b,i)=><Fragment key={b.id}>{i>0&&<ChevronRight size={11}/>}<button onClick={()=>onLocate(b.id)} disabled={b.id===entity.id}>{b.title}</button></Fragment>)}</nav><header className="esi-item-heading"><div><span>{esiItemScopeLabel(context,entity)} · {entity.name}</span><h2>{title}</h2></div><div>{brief.lesson&&<button onClick={()=>onTiming(brief.lesson)}><Play size={13}/>状态图示</button>}{itemTargets.length>0&&<button ref={itemToggle} aria-expanded={itemLinks} onClick={()=>{setSource(null);setItemLinks(!itemLinks)}}><GitBranch size={14}/>关联</button>}<button onClick={()=>onSource(entity)}><Code2 size={14}/>原文</button><button onClick={()=>onFileReferences(entity)}><GitBranch size={14}/>XML 引用</button></div></header><div className="esi-item-caption"><p>{brief.meaning}</p><details><summary>路径与来源</summary><code>{entity.id}</code><span>{context.filename}{entity.span?` · L${entity.span.line}–${entity.span.endLine}`:''}</span></details></div>{itemLinks&&<InlineFieldDetails key={entity.id+':item:'+source} row={itemRow} context={context} entity={entity} sourceFilter={source} onClose={()=>{itemToggle.current?.focus({preventScroll:true});setItemLinks(false)}} onLocate={onLocate} onReference={onReference} onSource={onSource} onTiming={onTiming}/>}<div className="esi-sheet-section"><strong>字段与配置</strong><label><span className="sr-only">筛选当前 ESI 字段</span><input aria-label="筛选当前 ESI 字段" placeholder="筛选字段、值或用途" value={filter} onChange={e=>setFilter(e.target.value)}/>{filter&&<button aria-label="清除字段筛选" onClick={()=>setFilter('')}><X size={12}/></button>}</label></div><div className="esi-field-table-wrap"><table className="esi-field-table"><thead><tr><th>字段</th><th>原文值</th><th>含义</th><th>对应关系</th></tr></thead><tbody>{visible.map(row=><Fragment key={row.key}><tr ref={expanded?.key===row.key?selectedRow:null} className={expanded?.key===row.key?'selected-field':''}><th><button ref={expanded?.key===row.key?selectedToggle:null} aria-expanded={expanded?.key===row.key} aria-label={`查看 ${row.label} 字段`} onClick={()=>{if(expanded?.key===row.key)setHidden(row.key);else select(row)}}><code>{row.label}</code><ChevronRight size={12} className={expanded?.key===row.key?'rotated':''}/></button></th><td><code className={row.state.state==='missing'?'missing-value':''}>{rowValue(row)}</code>{row.unit&&<small>{row.unit}</small>}{row.state.state==='unparsed'&&<small className="esi-unresolved">需核对</small>}{row.container&&<button className="esi-open-child" onClick={()=>onLocate(row.node.id,'',row.node.name==='Objects'||row.node.name==='Dictionary'?'dictionary':row.node.name==='Slots'?'profile':'structure')}>打开<ArrowRight size={11}/></button>}</td><td><span>{row.rule.covered?row.title:'原文保留'}</span></td><td><div className="esi-row-links">{[...new Set(row.associations.map(t=>t.surface))].map(s=><button key={s} aria-label={`查看 ${row.label} 与${surfaces[s]||s}的对应`} aria-pressed={expanded?.key===row.key&&activeSource===s} onClick={()=>select(row,s)}>{surfaces[s]||s}<b>{row.associations.filter(t=>t.surface===s).length}</b></button>)}{!row.associations.length&&<span>—</span>}</div></td></tr>{expanded?.key===row.key&&<tr className="esi-expanded-row"><td colSpan="4"><InlineFieldDetails key={row.key+':'+activeSource} row={row} context={context} entity={entity} sourceFilter={activeSource} onClose={collapse} onLocate={onLocate} onReference={onReference} onSource={onSource} onTiming={onTiming}/></td></tr>}</Fragment>)}</tbody></table>{!visible.length&&<div className="esi-sheet-empty">没有匹配的字段<button onClick={()=>setFilter('')}>清除筛选</button></div>}</div><PdoEntries entity={entity} context={context} onLocate={onLocate}/><Members entity={entity} context={context} onLocate={onLocate}/><footer className="esi-item-footer"><Info size={13}/><span>ESI 原文与字段规则分别表达；空白、0、false 保持原义。未知字段可从 XML 树和原文查阅。</span></footer></section>
+}

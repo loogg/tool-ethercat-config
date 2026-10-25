@@ -1,0 +1,70 @@
+.graph-canvas.watchdog-timing-mode { overflow: auto; background: #fbfcfe; }
+.watchdog-timing { min-width: 0; padding: 17px 20px 22px; color: #516d90; }
+.watchdog-timing > header { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.watchdog-timing h2 { font-size: 18px; font-weight: 600; color: #345577; margin: 0 0 9px; }
+.watchdog-timing > header p { font-size: 11px; color: #8496af; margin: 0; line-height: 1.8; }
+.watchdog-timing > header > button { display: flex; align-items: center; gap: 6px; padding: 8px 10px; border: 1px solid #d9e5f5; border-radius: 4px; font-size: 11px; color: #4a79b4; background: white; white-space: nowrap; }
+.watchdog-clock { display: flex; gap: 7px 20px; flex-wrap: wrap; align-items: center; margin: 13px 0; padding: 8px 12px; border-left: 2px solid #8aabda; background: #f0f5fd; font-size: 10px; color: #7291b8; line-height: 1.8; }
+.watchdog-clock strong { color: #4b75aa; font-size: 11px; font-weight: 500; }
+.watchdog-scenarios { display: flex; gap: 6px; flex-wrap: wrap; }
+.watchdog-scenarios > button { font-size: 11px; padding: 6px 9px; border-radius: 4px; border: 1px solid #e0e8f3; color: #7a8faa; background: #fff; }
+.watchdog-scenarios > button[aria-pressed=true] { color: #346db5; border-color: #9abbe5; background: #edf4ff; }
+.watchdog-time-control { display: flex; align-items: center; gap: 20px; margin: 13px 0; }
+.watchdog-time-control > span { color: #869ab5; font-size: 10px; white-space: nowrap; }
+.watchdog-time-control strong { color: #4678b6; font: 500 13px var(--mono); margin-left: 12px; }
+.watchdog-time-control > input { flex: 1; min-width: 70px; max-width: 510px; accent-color: #5488ce; }
+.watchdog-lanes { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 17px; }
+.watchdog-lane { padding: 15px 18px; border: 1px solid #dce6f3; border-radius: 6px; background: white; min-width: 0; }
+.watchdog-lane > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.watchdog-lane h3 { font-size: 14px; color: #3c5e85; font-weight: 500; margin: 0 0 8px; }
+.watchdog-lane header code { font-size: 10px; color: #92a5bf; }
+.watchdog-state { font-size: 9px; color: #5f9983; background: #f0f8f4; padding: 4px 6px; white-space: nowrap; border-radius: 3px; }
+.watchdog-lane.expired .watchdog-state { color: #ad7760; background: #fbf1eb; }
+.watchdog-lane.disabled .watchdog-state { color: #8b9aaf; background: #f2f5f9; }
+.watchdog-lane > p { font-size: 10px; line-height: 1.8; color: #8d9fb7; margin: 7px 0; }
+.watchdog-lane .watchdog-actor { color: #6282a9; margin: 13px 0 4px; font-size: 11px; }
+.watchdog-track { position: relative; margin: 13px 10px 8px 4px; height: 120px; }
+.watchdog-axis { position: absolute; left: 0; right: 0; top: 49px; border-top: 2px solid #ccd9eb; }
+.watchdog-pulse { position: absolute; top: 37px; height: 25px; width: 2px; background: #6293ce; transform: translateX(-1px); }
+.watchdog-pulse.future { opacity: .23; }
+.watchdog-expired-range { position: absolute; top: 35px; height: 29px; background: #f1d7ca; opacity: .7; }
+.watchdog-playhead { position: absolute; top: 1px; height: 98px; border-left: 1px solid #466f9f; opacity: .7; }
+.watchdog-deadline { position: absolute; top: 22px; height: 77px; border-left: 1px dashed #c69a81; }
+.watchdog-deadline > span { position: absolute; top: -20px; transform: translateX(-50%); font-size: 9px; white-space: nowrap; color: #b1836a; }
+.watchdog-last-trigger { position: absolute; top: 0; transform: translateX(-50%); font-size: 9px; color: #6b8aaf; white-space: nowrap; }
+.watchdog-window { position: absolute; top: 80px; border-top: 1px solid #9eb8d9; }
+.watchdog-window::before, .watchdog-window::after { content: ''; position: absolute; width: 1px; height: 7px; background: #9eb8d9; top: -4px; }
+.watchdog-window::after { right: 0; }
+.watchdog-window > span { position: absolute; left: 50%; transform: translateX(-50%); font-size: 9px; color: #88a0bd; top: 5px; white-space: nowrap; }
+.watchdog-ticks { position: absolute; top: 107px; left: 0; right: 0; }
+.watchdog-ticks > span { position: absolute; font: 9px var(--mono); color: #99acc5; transform: translateX(-50%); white-space: nowrap; }
+.watchdog-ticks > span:first-child { transform: none; }
+.watchdog-ticks > span:last-child { transform: translateX(-100%); }
+.watchdog-lane-result { min-height: 41px; border-top: 1px solid #e9eef6; padding-top: 10px; color: #7c93af; font-size: 10px; line-height: 1.8; }
+.watchdog-lane.expired .watchdog-lane-result { color: #ad7e67; }
+.watchdog-disable { display: flex; align-items: center; gap: 5px; font-size: 10px; color: #8fa0b7; padding-top: 10px; }
+.watchdog-disable input { accent-color: #6993cc; }
+.watchdog-reading-key { display: flex; gap: 12px 22px; flex-wrap: wrap; margin: 17px 0 21px; }
+.watchdog-reading-key > span { display: flex; gap: 6px; align-items: center; color: #8fa3bf; font-size: 9px; }
+.watchdog-reading-key i { width: 10px; height: 9px; display: inline-block; }
+.pulse-key { border-left: 2px solid #6293ce; }
+.deadline-key { border-left: 1px dashed #c69a81; }
+.playhead-key { border-left: 1px solid #466f9f; }
+.watchdog-macro-scope { display: flex; align-items: flex-start; gap: 8px; border-top: 1px solid #e1e9f4; padding-top: 16px; color: #88a0bd; }
+.watchdog-macro-scope svg { flex-shrink: 0; margin-top: 1px; }
+.watchdog-macro-scope strong { font-size: 11px; font-weight: 500; color: #607fa5; }
+.watchdog-macro-scope p, .watchdog-timing-note { font-size: 10px; line-height: 1.9; color: #8fa1bb; margin: 7px 0 0; }
+.watchdog-timing-note a { color: #6f96c7; margin-left: 9px; }
+@media (max-width:1100px) {
+  .watchdog-lanes { grid-template-columns: 1fr; }
+}
+@media (max-width:560px) {
+  .watchdog-timing { padding: 18px 13px; }
+  .watchdog-timing > header { align-items: flex-start; }
+  .watchdog-timing h2 { font-size: 16px; }
+  .watchdog-timing > header > button { font-size: 10px; padding: 7px; }
+  .watchdog-scenarios > button { font-size: 10px; padding: 7px; }
+  .watchdog-lane { padding: 14px 12px; }
+  .watchdog-time-control { gap: 12px; }
+  .watchdog-time-control strong { margin-left: 8px; }
+}
