@@ -112,7 +112,7 @@
 
 关键画面：[F000成员](content-fixes-1.5.1/f000.jpg)、[双向关系图](content-fixes-1.5.1/bidirectional.jpg)、[窄屏对应表](content-fixes-1.5.1/bidirectional-mobile.png)。其他过程截图保留在被忽略的temp目录。
 
-当前阶段：v1.5.1 本地修正、测试和实际界面核验完成，发布核验待完成。本轮结论仅覆盖列出的修复与条件补充，仍不声称完成每句话的全版本官方认证。
+当前阶段：v1.5.1 本地修正、测试、实际界面与 Pages 部署核验完成。本轮结论仅覆盖列出的修复与条件补充，仍不声称完成每句话的全版本官方认证。
 
 ### 交付候选
 
@@ -121,4 +121,6 @@
 - `ethercat-atlas-v1.5.1.zip`：605541 Byte，32个文件；其中29个dist文件逐个与本地构建核对一致。
 - ZIP SHA256：`093b37b2809c4dd30d9cae0fd71cdacb4b85ede45e9f62d1f051a4163e1814c6`。
 - 使用包内Node预览脚本在没有node_modules的交付目录启动，入口及主脚本HTTP均为200；测试进程已关闭。
-- 最终提交、CI与线上核验：待完成。
+- 代码提交：`67d5124e28f46762f5e9714c1b9a4d7462672db1`；[CI与Pages部署](https://github.com/loogg/tool-ethercat-config/actions/runs/40199393699)均成功。
+- 发布后的29个公开静态文件逐个下载，与GitHub Pages子路径候选的SHA256全部一致。线上浏览器确认显示v1.5.1，并实际切换模块化示例成功。
+- 线上入口：[EtherCAT Atlas](https://loogg.github.io/tool-ethercat-config/)。本记录的后续提交仅补充验收结果，不改变已核验的运行代码。
