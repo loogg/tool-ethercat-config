@@ -5,6 +5,12 @@ export const attr=(node,name)=>node?.attributes.find(item=>item.name===name)?.va
 export function esiNumber(raw){if(raw===undefined||raw===null||String(raw).trim()==='')return null;const value=String(raw).trim();if(!/^(?:#x[\da-f]+|0x[\da-f]+|\d+)$/i.test(value))return null;const number=Number(value.replace(/^#x/i,'0x'));return Number.isSafeInteger(number)?number:null}
 export const esiHex=(n,width=4)=>n===null||n===undefined?'未解析':`0x${n.toString(16).toUpperCase().padStart(width,'0')}`
 export const esiBool=raw=>['1','true'].includes(String(raw).trim())?true:['0','false'].includes(String(raw).trim())?false:null
+/** Case-sensitive ESI enumeration; unknown flags have no inferred direction. */
+export function esiPdoDirections(raw){
+  const value=String(raw??'').trim()
+  if(!['R','T','RT','TR'].includes(value))return null
+  return [...(value.includes('R')?['Rx']:[]),...(value.includes('T')?['Tx']:[])]
+}
 const descendants=(node,name)=>children(node).flatMap(item=>[...(item.name===name?[item]:[]),...descendants(item,name)])
 
 /** Quote-aware source binding; discard all spans if DOM and source disagree. */

@@ -1,4 +1,4 @@
-import { attr, esiBool, esiNumber } from '../lib/esi-model.js'
+import { attr, esiBool, esiNumber, esiPdoDirections } from '../lib/esi-model.js'
 
 const SSC={title:'Beckhoff ET9300 V1.10 · 应用与模块描述',url:'https://download.beckhoff.com/download/Document/io/ethercat-development-products/an_et9300_v1i10.pdf'}
 const GUIDE={title:'ETG.2200 · EtherCAT Implementation Guide',url:'https://www.ethercat.org/download/documents/ETG2200_V3i2i2_G_R_EtherCATImplementationGuide.pdf'}
@@ -46,7 +46,7 @@ const common={
   Eeprom:rule('SII / EEPROM 内容描述','XML 设备描述与 EEPROM/SII 是不同载体。配置字节须按 ESC 型号核对。','大小、配置数据等',['ByteSize','ConfigData'],{entryId:'esi-eeprom'}),
   ConfigData:rule('ESC 配置字节序列','逐字节数据，不能把所有字节串作为普通整数解读。具体位含义依 ESC。','偶数个十六进制字符',['8000000000000000000000000000'],{entryId:'esi-configdata'}),
   Access:rule('对象访问权限','权限、状态条件与固件回调都可能影响实际访问。','基础权限值',['ro','rw','wo'],{kind:'enum'}),
-  PdoMapping:rule('对象可映射方向','声明类型/对象是否可用于接收或发送 PDO，不代表已经分配进活动 PDO。','方向标志，组合须核对版本',['R','T','RT']),
+  PdoMapping:rule('对象可映射方向','R允许RxPDO映射，T允许TxPDO映射，RT/TR同时声明两种能力；不代表已经进入活动PDO。','区分大小写的方向标志；应用表的组合写法须另按SSC版本核对',['R','T','RT','TR'],{kind:'pdo-mapping'}),
   DefaultData:rule('默认原始数据','这是 ESI 默认字节，不能当作在线读取结果。数值解码需先确认类型与字节序。','十六进制字节串',['92010200','80030000']),
 }
 const attributes={
@@ -91,6 +91,7 @@ export function checkEsiField(node,attribute){
   const r=esiFieldRule(node,attribute),raw=attribute?attr(node,attribute):node?.value
   if(raw===undefined)return {state:'missing',label:'未显式声明',value:null}
   if(r.kind==='boolean')return {state:esiBool(raw)===null?'unparsed':'explicit',label:esiBool(raw)===null?'无法按 boolean 解读':`显式 ${esiBool(raw)?'true':'false'}`,value:esiBool(raw)}
+  if(r.kind==='pdo-mapping'){const directions=esiPdoDirections(raw);return{state:directions?'explicit':'unparsed',label:directions?`可映射：${directions.map(d=>d+'PDO').join(' / ')}`:'未知映射标志，保留原文',value:directions}}
   if(r.kind==='unsigned'){const v=esiNumber(raw);return{state:v===null||v>r.max?'unparsed':'explicit',label:v===null||v>r.max?'数值需核对':`显式 ${v}`,value:v}}
   return{state:'explicit',label:raw===''?'显式空文本':'显式值',value:raw}
 }

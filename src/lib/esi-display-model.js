@@ -1,4 +1,4 @@
-import { attr, child, children, esiHex, esiNumber, text } from './esi-model.js'
+import { attr, child, children, esiHex, esiNumber, esiPdoDirections, text } from './esi-model.js'
 import { checkEsiField, esiFieldRule } from '../data/esi-field-rules.js'
 import { crossSourceContracts } from '../data/cross-source-contracts.js'
 
@@ -77,7 +77,9 @@ export function esiFieldAssociations(node,attribute,context){
   else if(name==='Index'&&p==='Entry'&&esiNumber(text(node))!==0)add(target('address','app-index'))
   else if(['SubIndex','SubIdx'].includes(name))add(target('address','app-si'))
   else if(name==='Access')add(target('access','app'))
-  else if(name==='PdoMapping'){add(target(node.value==='T'?'pdo-input':'pdo-output','app',{title:'M · rx/tx 可映射方向'}))}
+  else if(name==='PdoMapping'){
+    for(const d of esiPdoDirections(node.value)||[])add(target(d==='Tx'?'pdo-input':'pdo-output','app',{title:d==='Tx'?'M · tx / TxPDO 可映射':'M · rx / RxPDO 可映射',relationKind:'describe',condition:`${d}PDO可映射能力；不等于已活动。与应用成员的${d==='Tx'?'tx':'rx'}能力分别核对，双向组合填写语法按所用SSC版本确认；当前未绑定应用文件。`}))
+  }
   else if(name==='BitLen'){add(target('types','app-type'));add(target(pdoContract,'ssc',{title:direction==='Tx'?'输入容量约束':'输出容量约束'}))}
   else if(name==='BitOffs'){add(target('types','app-type',{title:'E · DataType / Padding'}))}
   else if((name==='DataType'&&p==='Entry')||name==='BitSize'||(name==='Type'&&['Object','SubItem'].includes(p))){add(target('types','app-type'));if(p==='Object')add(target('types','app-code'))}
