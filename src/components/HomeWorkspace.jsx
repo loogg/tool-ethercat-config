@@ -9,7 +9,7 @@ function HomeLink({ target, onOpen, children, className = '', label }) {
 export default function HomeWorkspace({ entries, recent, onNavigate, onCalculator, onRecent }) {
   const model = homeModel(entries, recent)
   function open(target) { if (target.kind === 'calculator') onCalculator(target.id); else onNavigate(target.id) }
-  return <section className="home-workspace" aria-label="工具首页"><header className="home-heading"><h1>EtherCAT 配置查阅工作台</h1><p>先理解原理，或直接查配置的含义、关系与计算。</p></header>
+  return <section className="home-workspace" aria-label="工具首页"><header className="home-heading"><h1>EtherCAT 配置查阅工具</h1><p>先理解原理，或直接查配置的含义、关系与计算。</p></header>
     <div className="home-entry-grid" aria-label="四个主要入口">{model.entrypoints.map(item => {
       const Icon = icons[item.id]
       return <HomeLink key={item.id} target={item.target} onOpen={open} label={`进入${item.title}`} className={`home-entry home-entry-${item.id}`}><span className="home-entry-icon"><Icon size={20} /></span><h2>{item.title}</h2><p>{item.description}</p><span className="home-entry-action">{item.id === 'concepts' ? '开始理解' : '进入查阅'}<ArrowRight size={14} /></span></HomeLink>

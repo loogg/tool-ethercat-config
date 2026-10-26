@@ -1,4 +1,4 @@
-# EtherCAT Config Atlas
+# EtherCAT 配置查阅工具
 
 - Independent browser-only React/Vite tool. Run commands in this repository only.
 - All content/search/calculations run locally; do not add server dependencies or remote AI calls.

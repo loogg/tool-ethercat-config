@@ -1,6 +1,10 @@
-# EtherCAT Atlas
+# EtherCAT 配置查阅工具
 
 面向 EtherCAT 从站开发的纯前端配置查阅工作台。SSC Tool、应用定义文件（Excel）、ESI 设备描述文件和 CoE/ESC 概念统一检索，带双向配置关系、可追溯资料和五类交互计算。
+
+## v1.5.4 名称统一
+
+产品显示名称统一为“EtherCAT 配置查阅工具”，同步页眉、浏览器标题、首页和预览提示；沿用现有链接及本地查阅记录。
 
 ## v1.5.3 关系图路由与自动排版
 
@@ -71,7 +75,7 @@
 
 ## 打开最终版
 
-在线站点：[EtherCAT Atlas](https://loogg.github.io/tool-ethercat-config/)。
+在线站点：[EtherCAT 配置查阅工具](https://loogg.github.io/tool-ethercat-config/)。
 
 已构建的项目可双击 `Start-Tool.cmd`，再访问 <http://127.0.0.1:4181/>。需要本机安装 Node.js 22.12+（当前开发/验证为 Node 24）。该预览仅监听 127.0.0.1。关闭命令窗口或按 Ctrl+C 停止服务。
 

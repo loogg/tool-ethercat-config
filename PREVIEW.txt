@@ -1,4 +1,4 @@
-EtherCAT Atlas · 配置查阅工作台 v1.5.3
+EtherCAT 配置查阅工具 v1.5.4
 
 运行静态交付包
 

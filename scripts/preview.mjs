@@ -28,4 +28,4 @@ server.on('error', error => {
   console.error(error.code === 'EADDRINUSE' ? `端口 ${port} 已在使用。若工具已打开，请访问 http://127.0.0.1:${port}/` : error.message)
   process.exitCode = 1
 })
-server.listen(port, '127.0.0.1', () => console.log(`EtherCAT Atlas · http://127.0.0.1:${port}/\n仅监听本机。按 Ctrl+C 关闭。`))
+server.listen(port, '127.0.0.1', () => console.log(`EtherCAT 配置查阅工具 · http://127.0.0.1:${port}/\n仅监听本机。按 Ctrl+C 关闭。`))
