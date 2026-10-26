@@ -73,9 +73,16 @@
 - 截图审查发现窄屏缩放控件覆盖最后一张卡片；已按实际画布预留上28/下56/左右12px，缩放控件统一横排。复验390×760时节点、标签、顶部跟随按钮和底部控件互不覆盖。普通点击、检查器切换仍保留跟随。
 - 独立4182服务模拟`/tool-ethercat-config/`子路径，布局Worker加载及4/4节点/边正常、控制台无警告或错误。
 - 最终ZIP解压目录不含node_modules，以包内脚本在4183启动；MIN_PD_CYCLE_TIME的2个对象容器及2条线可见，控制台无警告或错误。
-- ZIP：ethercat-atlas-v1.5.3.zip，1056457 Byte，36个文件，包含33个dist文件和Worker、原始许可证、预览脚本。逐文件SHA256与源产物一致。
-- ZIP SHA256：48b24d0e5831b8a3052d80177611621e34b69ca336263e0cd691e8f25298e5d7。
+- ZIP：ethercat-atlas-v1.5.3.zip，1056451 Byte，36个文件，包含33个dist文件和Worker、原始许可证、预览脚本。逐文件SHA256与源产物一致。
+- ZIP SHA256：66f37a4068a6968bc24dd39cdcebec413b7f6c2b5dee72397adbc5652df80b25。
 
 实际截图：[桌面反向/平行路由](graph-layout-routing/desktop-routing.png)、[窄屏自动纵向及控件留白](graph-layout-routing/narrow-routing.png)。
 
-当前阶段：本地实现、验证及交付包通过，准备提交、推送并核验公开Pages。
+## 公开部署核验
+
+- 代码提交：`67b78f385a006c7eec11e6fa8c9d6dfd35a80cb6`。[GitHub CI与Pages部署](https://github.com/loogg/tool-ethercat-config/actions/runs/40260644379)均成功，Linux重新执行npm ci、lint、166项测试及生产构建。
+- 下载33个线上静态文件，所有文件SHA256与Pages子路径候选一致，包含ELK Worker和两份许可证资料。NOTICE在Windows与CI间的换行符已统一；最终ZIP逐文件校验、完整性检查均通过。
+- 线上实际浏览器确认v1.5.3、ESC_32BIT_ACCESS为4节点4线，跟随状态正常，控制台无警告或错误。线上截图留于本机artifacts/online-routing-v1.5.3.png。
+- 线上入口：[关系图修复](https://loogg.github.io/tool-ethercat-config/#/entry/esc-32bit-access?collection=SSC&pane=detail)。静态资源核验与实际页面为同一版本。
+
+当前阶段：实现、几何/交互/视觉、静态包和公开部署均通过。
