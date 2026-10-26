@@ -1,7 +1,9 @@
 import { ConceptText } from './ConceptHelp.jsx'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Background, Controls, Handle, MarkerType, Position, ReactFlow } from '@xyflow/react'
-import dagre from '@dagrejs/dagre'
+import { Background, MarkerType, ReactFlow, ReactFlowProvider } from '@xyflow/react'
+import { useResponsiveDiagram } from '../lib/use-responsive-diagram.js'
+import { RoutedHandles, ResponsiveViewport, DiagramStatus, DiagramControls } from './RoutedDiagram.jsx'
+import { diagramNodes, diagramEdges, routedEdgeTypes } from './diagram-types.js'
 import { ArrowRight, Bookmark, BookOpen, ChevronDown, ChevronRight, Columns3, Copy, ExternalLink, FileSpreadsheet, GitBranch, Info, PanelRightClose, Search, Table2, X } from 'lucide-react'
 import { applicationWorkbooks } from '../data/application-workbooks.js'
 import { applicationColumns, buildApplicationRelations, displayValue, fieldOccurrence, filterApplicationObjects, generatedSubindex, getSlots, hex, resolveModuleInstance } from '../lib/application-model.js'
@@ -19,43 +21,30 @@ export function ApplicationNavigation({ context, entries, onContext, onNavigate 
 }
 
 function ApplicationGraphNode({ data }) {
-  return <div className={`application-graph-node ${data.source ? 'source-node' : ''} ${data.preview ? 'preview-node' : ''}`}><Handle type="target" position={Position.Left} /><small title={data.parent}>{data.parent}</small><strong>{data.title}</strong><span>{data.value}</span>{data.preview && <em>规则预览</em>}<Handle type="source" position={Position.Right} /></div>
+  return <><RoutedHandles ports={data.ports}/><div className={`application-graph-node ${data.source ? 'source-node' : ''} ${data.preview ? 'preview-node' : ''}`}><small title={data.parent}>{data.parent}</small><strong>{data.title}</strong><span>{data.value}</span>{data.preview && <em>规则预览</em>}</div></>
 }
 const nodeTypes = { application: ApplicationGraphNode }
 
 function RelationshipDialog({ graph, occurrence, entries, onClose, onNavigate, onLocate }) {
   const dialogRef = useRef(null)
-  const stageRef = useRef(null)
-  const flowRef = useRef(null)
-  const fitFrame = useRef(null)
   const [selection, setSelection] = useState({ kind: 'node', id: 'source' })
   const [view, setView] = useState(() => window.matchMedia('(max-width: 720px)').matches ? 'list' : 'graph')
-  const nodes = useMemo(() => {
-    const layout = new dagre.graphlib.Graph().setGraph({ rankdir: 'LR', ranksep: 70, nodesep: 30, marginx: 30, marginy: 30 }).setDefaultEdgeLabel(() => ({}))
-    graph.nodes.forEach(node => layout.setNode(node.id, { width: 238, height: 118 }))
-    graph.edges.forEach(edge => layout.setEdge(edge.source, edge.target))
-    dagre.layout(layout)
-    return graph.nodes.map(node => {
-      const point = layout.node(node.id)
-      const target = entries.find(entry => entry.id === node.entryId)
-      return { id: node.id, type: 'application', position: { x: point.x - 119, y: point.y - 59 }, data: { ...node, title: target && node.title === node.entryId ? target.name : node.title }, selected: selection.kind === 'node' && selection.id === node.id, draggable: false, ariaLabel: `${node.title} ${node.parent} ${node.value}` }
-    })
-  }, [graph, entries, selection])
-  const edges = graph.edges.map(edge => ({ ...edge, type: 'smoothstep', selected: selection.kind === 'edge' && selection.id === edge.id, style: { stroke: '#7292ba', strokeDasharray: edge.kind === 'reference' ? '5 4' : undefined }, markerEnd: edge.kind === 'reference' ? undefined : { type: MarkerType.ArrowClosed, color: '#7292ba' }, labelStyle: { fontSize: 11, fill: '#3d5878' }, labelBgPadding: [6, 4], labelBgStyle: { fill: '#fff' }, ariaLabel: `${edge.label}：${graph.nodes.find(node => node.id === edge.source)?.title} → ${graph.nodes.find(node => node.id === edge.target)?.title}` }))
+  const geometry = useMemo(() => ({ nodes: graph.nodes.map(node => ({ id: node.id, width: 238, height: 118 })), edges: graph.edges.map(edge => ({ ...edge, labelFontSize: 11 })) }), [graph])
+  const { attachCanvas, ...diagram } = useResponsiveDiagram(geometry, { enabled: view === 'graph' })
+  const nodes = diagramNodes(graph.nodes.map(node => {
+    const target = entries.find(entry => entry.id === node.entryId)
+    return { id: node.id, type: 'application', data: { ...node, title: target && node.title === node.entryId ? target.name : node.title }, selected: selection.kind === 'node' && selection.id === node.id, draggable: false, ariaLabel: `${node.title} ${node.parent} ${node.value}` }
+  }), diagram.layout)
+  const edges = diagramEdges(graph.edges.map(edge => ({ ...edge, selected: selection.kind === 'edge' && selection.id === edge.id, style: { stroke: '#7292ba', strokeDasharray: edge.kind === 'reference' ? '5 4' : undefined }, markerEnd: edge.kind === 'reference' ? undefined : { type: MarkerType.ArrowClosed, color: '#7292ba' }, labelStyle: { fontSize: 11, fill: '#3d5878' }, labelBgPadding: [6, 4], labelBgStyle: { fill: '#fff' }, ariaLabel: `${edge.label}：${graph.nodes.find(node => node.id === edge.source)?.title} → ${graph.nodes.find(node => node.id === edge.target)?.title}` })), diagram.layout)
   const selectedNode = graph.nodes.find(node => selection.kind === 'node' && node.id === selection.id)
   const selectedEdge = graph.edges.find(edge => selection.kind === 'edge' && edge.id === selection.id)
   useEffect(() => {
     const previous = document.activeElement
     const dialog = dialogRef.current
     dialog.showModal()
-    const observer = new ResizeObserver(() => {
-      cancelAnimationFrame(fitFrame.current)
-      fitFrame.current = requestAnimationFrame(() => flowRef.current?.fitView({ padding: .12, minZoom: .65, maxZoom: 1, duration: 0 }))
-    })
-    observer.observe(stageRef.current)
-    return () => { observer.disconnect(); cancelAnimationFrame(fitFrame.current); dialog.close(); previous?.focus() }
+    return () => { dialog.close(); previous?.focus() }
   }, [])
-  return <dialog className="application-relation-dialog" ref={dialogRef} aria-label="应用字段局部关系" onCancel={event => { event.preventDefault(); onClose() }}><header><div><GitBranch size={17} /><strong>{occurrence.name} 的关联</strong><span>{occurrence.address}</span></div><button className="icon-button" aria-label="关闭局部关系图" onClick={onClose}><X size={18} /></button></header><div className="application-relation-context">{occurrence.sourcePath}</div><div className="application-relation-controls"><div><button aria-pressed={view === 'graph'} onClick={() => setView('graph')}>关系图</button><button aria-pressed={view === 'list'} onClick={() => setView('list')}>文字关系</button></div><small>实线：包含 / 推导 · 虚线：参考 / 对应</small></div><div className="application-relation-canvas" ref={stageRef} onKeyDownCapture={event => { if (event.key !== 'Enter') return; const node = event.target.closest?.('.react-flow__node'); const edge = event.target.closest?.('.react-flow__edge'); if (node || edge) setSelection({ kind: node ? 'node' : 'edge', id: (node || edge).getAttribute('data-id') }) }}>{view === 'graph' ? <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} onInit={api => { flowRef.current = api }} onNodesChange={changes => { if (changes.some(change => change.type === "dimensions")) { cancelAnimationFrame(fitFrame.current); fitFrame.current = requestAnimationFrame(() => flowRef.current?.fitView({ padding: .12, minZoom: .65, maxZoom: 1, duration: 0 })) } }} fitView fitViewOptions={{ padding: .12, minZoom: .65, maxZoom: 1 }} minZoom={.4} maxZoom={1.5} onNodeClick={(_, node) => setSelection({ kind: 'node', id: node.id })} onEdgeClick={(_, edge) => setSelection({ kind: 'edge', id: edge.id })} nodesDraggable={false} nodesConnectable={false} deleteKeyCode={null} panOnScroll zoomOnScroll={false} nodesFocusable edgesFocusable ariaLabelConfig={{ 'controls.zoomIn.ariaLabel': '放大关系图', 'controls.zoomOut.ariaLabel': '缩小关系图', 'controls.fitView.ariaLabel': '适应关系图', 'node.a11yDescription.default': '按 Enter 选择节点。', 'edge.a11yDescription.default': '按 Enter 选择关系。' }}><Background gap={22} size={1} color="#dce4ef" /><Controls showInteractive={false} /></ReactFlow> : <div className="application-relation-list">{graph.edges.map(edge => <button key={edge.id} onClick={() => setSelection({ kind: 'edge', id: edge.id })}><small>{edge.label}</small><strong>{graph.nodes.find(node => node.id === edge.source)?.title}<ArrowRight size={13} />{graph.nodes.find(node => node.id === edge.target)?.title}</strong><span>{edge.condition || '查看关联节点的所属位置与说明'}</span></button>)}</div>}</div><footer aria-live="polite">{selectedNode ? <><strong>{selectedNode.title}<small>{selectedNode.value}</small></strong><p>{selectedNode.brief}</p><span>{selectedNode.parent}</span>{selectedNode.locate && <button onClick={() => onLocate(selectedNode.locate)}>在表中定位<ArrowRight size={13} /></button>}{selectedNode.entryId && entries.some(entry => entry.id === selectedNode.entryId) && <button onClick={() => onNavigate(selectedNode.entryId)}>查看相关配置<ExternalLink size={13} /></button>}</> : <><strong>{selectedEdge.label}</strong><p>{selectedEdge.condition || '关系来自当前工作表及对应字段定义。'}</p><span>{graph.nodes.find(node => node.id === selectedEdge.source)?.parent} → {graph.nodes.find(node => node.id === selectedEdge.target)?.parent}</span></>}</footer></dialog>
+  return <dialog className="application-relation-dialog" ref={dialogRef} aria-label="应用字段局部关系" onCancel={event => { event.preventDefault(); onClose() }}><header><div><GitBranch size={17} /><strong>{occurrence.name} 的关联</strong><span>{occurrence.address}</span></div><button className="icon-button" aria-label="关闭局部关系图" onClick={onClose}><X size={18} /></button></header><div className="application-relation-context">{occurrence.sourcePath}</div><div className="application-relation-controls"><div><button aria-pressed={view === 'graph'} onClick={() => { setView('graph'); diagram.resumeAuto() }}>关系图</button><button aria-pressed={view === 'list'} onClick={() => setView('list')}>文字关系</button></div><small>实线：包含 / 推导 · 虚线：参考 / 对应</small></div><div className="application-relation-canvas diagram-canvas" ref={attachCanvas} onKeyDownCapture={event => { if (event.key !== 'Enter') return; const node = event.target.closest?.('.react-flow__node'); const edge = event.target.closest?.('.react-flow__edge'); if (node || edge) setSelection({ kind: node ? 'node' : 'edge', id: (node || edge).getAttribute('data-id') }) }}>{view === 'graph' ? <><DiagramStatus diagram={diagram}/><ReactFlowProvider><ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} edgeTypes={routedEdgeTypes} onMove={diagram.onMove} minZoom={.1} maxZoom={1.5} onNodeClick={(_, node) => setSelection({ kind: 'node', id: node.id })} onEdgeClick={(_, edge) => setSelection({ kind: 'edge', id: edge.id })} nodesDraggable={false} nodesConnectable={false} deleteKeyCode={null} panOnScroll zoomOnScroll={false} nodesFocusable edgesFocusable ariaLabelConfig={{ 'controls.zoomIn.ariaLabel': '放大关系图', 'controls.zoomOut.ariaLabel': '缩小关系图', 'controls.fitView.ariaLabel': '适应关系图', 'node.a11yDescription.default': '按 Enter 选择节点。', 'edge.a11yDescription.default': '按 Enter 选择关系。' }}><ResponsiveViewport diagram={diagram}/><Background gap={22} size={1} color="#dce4ef" /><DiagramControls diagram={diagram} fitLabel="适应关系图"/></ReactFlow></ReactFlowProvider></> : <div className="application-relation-list">{graph.edges.map(edge => <button key={edge.id} onClick={() => setSelection({ kind: 'edge', id: edge.id })}><small>{edge.label}</small><strong>{graph.nodes.find(node => node.id === edge.source)?.title}<ArrowRight size={13} />{graph.nodes.find(node => node.id === edge.target)?.title}</strong><span>{edge.condition || '查看关联节点的所属位置与说明'}</span></button>)}</div>}</div><footer aria-live="polite">{selectedNode ? <><strong>{selectedNode.title}<small>{selectedNode.value}</small></strong><p>{selectedNode.brief}</p><span>{selectedNode.parent}</span>{selectedNode.locate && <button onClick={() => onLocate(selectedNode.locate)}>在表中定位<ArrowRight size={13} /></button>}{selectedNode.entryId && entries.some(entry => entry.id === selectedNode.entryId) && <button onClick={() => onNavigate(selectedNode.entryId)}>查看相关配置<ExternalLink size={13} /></button>}</> : <><strong>{selectedEdge.label}</strong><p>{selectedEdge.condition || '关系来自当前工作表及对应字段定义。'}</p><span>{graph.nodes.find(node => node.id === selectedEdge.source)?.parent} → {graph.nodes.find(node => node.id === selectedEdge.target)?.parent}</span></>}</footer></dialog>
 }
 
 function FieldInspector({ context, occurrence, graph, onClose, onGraph, onNavigate, onSyntax, onTiming, onCross }) {

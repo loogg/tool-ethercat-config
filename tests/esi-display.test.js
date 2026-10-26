@@ -109,10 +109,10 @@ test('CiA402 descriptions and state diagrams use confirmed profile and axis scop
 test('all presented associations have real rule destinations and source context',()=>{
   for(const example of esiExamples){const document=parseEsiXml(example.xml,DOMParser),scope=esiScope(document),c={document,scope,ownerScope:{...scope,owner:scope.device},node:scope.device.node};for(const node of document.nodes)for(const a of [null,...node.attributes.map(a=>a.name)])for(const t of esiFieldAssociations(node,a,c)){assert.ok(entryMap.has(t.entryId),t.entryId);assert.ok(t.path);assert.ok(t.condition);assert.ok(t.references.length)}}
 })
-test('local capacity graph has a separate active-bit conversion and no invented SSC value',()=>{
+test('local capacity graph has a separate active-bit conversion and no invented SSC value',async()=>{
   const c=context(),entry=c.scope.pdos[0].entries[0].node,rows=esiFieldRows({...c,node:entry}),row=rows.find(r=>r.label==='BitLen'),g=buildEsiFieldGraph(row,c)
   assert.equal(g.nodes.find(n=>n.focal).value,'16');assert.ok(g.nodes.some(n=>n.title==='活动 PDO → Byte'));assert.ok(g.edges.some(e=>e.label==='L ≤ 容量'));assert.ok(g.edges.some(e=>e.condition.includes('候选')));assert.ok(g.nodes.filter(n=>n.role==='字段规则').every(n=>n.value===undefined))
-  const arranged=layoutEsiFieldGraph(g);assert.ok(Math.max(...arranged.nodes.map(n=>n.position.x))<600);for(const e of arranged.edges){assert.ok(e.sourceHandle);assert.ok(e.targetHandle)}
+  const arranged=await layoutEsiFieldGraph(g);assert.ok(Math.max(...arranged.nodes.map(n=>n.position.x))<600);for(const e of arranged.edges){assert.ok(e.sourceHandle);assert.ok(e.targetHandle)}
   for(let i=0;i<arranged.nodes.length;i++)for(let j=i+1;j<arranged.nodes.length;j++){const a=arranged.nodes[i].position,b=arranged.nodes[j].position;assert.ok(a.x+236<=b.x||b.x+236<=a.x||a.y+132<=b.y||b.y+132<=a.y)}
 })
 test('module step graphs keep object and PDO formulas separate and breadcrumbs preserve context',()=>{

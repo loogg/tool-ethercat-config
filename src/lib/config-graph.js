@@ -1,4 +1,4 @@
-import dagre from '@dagrejs/dagre'
+import { layoutDiagram } from './graph-layout.js'
 import { parseUnsigned, calculateBitLayout, planSmMemory, decodeSmControl } from './calculations.js'
 import { sourceLabels, normalize } from './library.js'
 import { getConfigModel } from '../data/config-models.js'
@@ -346,36 +346,17 @@ export function filterConfigGraph(graph, mode = 'all') {
   return { ...graph, edges, nodes: graph.nodes.filter(node => ids.has(node.id)) }
 }
 
-function layoutInDirection(graph, direction) {
-  const byId = new Map(graph.nodes.map(node => [node.id, node]))
-  const topLevel = graph.nodes.filter(node => !node.parentId)
-  const model = new dagre.graphlib.Graph({ multigraph: true })
-  model.setGraph({ rankdir: direction, ranksep: direction === 'LR' ? 90 : 52, nodesep: 32, marginx: 24, marginy: 24 })
-  model.setDefaultEdgeLabel(() => ({}))
-  topLevel.forEach(node => model.setNode(node.id, { width: node.isGroup ? GROUP_WIDTH : NODE_WIDTH, height: node.isGroup ? node.groupHeight || GROUP_HEIGHT : node.nodeHeight || NODE_HEIGHT }))
-  graph.edges.forEach(link => {
-    const source = byId.get(link.source)?.parentId || link.source
-    const target = byId.get(link.target)?.parentId || link.target
-    if (source !== target) model.setEdge(source, target, { weight: link.kind === 'context' ? 1 : 2 }, link.id)
-  })
-  dagre.layout(model)
-  if (graph.sample === 'cycle') {
-    const objects = topLevel.filter(node => node.isGroup).sort((a, b) => a.id.localeCompare(b.id))
-    const coordinates = objects.map(node => model.node(node.id)[direction === 'LR' ? 'y' : 'x']).sort((a, b) => a - b)
-    objects.forEach((node, i) => { model.node(node.id)[direction === 'LR' ? 'y' : 'x'] = coordinates[i] })
+export function configDiagram(graph) {
+  return {
+    nodes: graph.nodes.map(node => ({ id: node.id, parentId: node.parentId, width: node.isGroup ? GROUP_WIDTH : NODE_WIDTH, height: node.isGroup ? node.groupHeight || GROUP_HEIGHT : node.nodeHeight || NODE_HEIGHT, x: node.parentId ? 18 : 0, y: node.parentId ? 78 + (node.childOrder || 0) * 74 : 0 })),
+    edges: graph.edges.map(edge => ({ id: edge.id, source: edge.source, target: edge.target, label: edge.label })),
   }
-  return { direction, nodes: graph.nodes.map(node => node.parentId ? { ...node, x: 18, y: 78 + (node.childOrder || 0) * 74 } : { ...node, x: model.node(node.id).x - (node.isGroup ? GROUP_WIDTH : NODE_WIDTH) / 2, y: model.node(node.id).y - (node.isGroup ? node.groupHeight || GROUP_HEIGHT : node.nodeHeight || NODE_HEIGHT) / 2 }), width: model.graph().width, height: model.graph().height }
 }
 
-export function layoutConfigGraph(graph, preference = 'auto', availableWidth = 1000, availableHeight = 680) {
-  if (preference === 'horizontal') return layoutInDirection(graph, 'LR')
-  if (preference === 'vertical') return layoutInDirection(graph, 'TB')
-  const horizontal = layoutInDirection(graph, 'LR')
-  const vertical = layoutInDirection(graph, 'TB')
-  if (availableWidth < 650) return vertical
-  const hScale = Math.min(availableWidth / horizontal.width, availableHeight / horizontal.height, 1)
-  const vScale = Math.min(availableWidth / vertical.width, availableHeight / vertical.height, 1)
-  return hScale >= .88 || hScale >= vScale ? horizontal : vertical
+export async function layoutConfigGraph(graph, preference = 'auto', availableWidth = 1000, availableHeight = 680) {
+  const layout = await layoutDiagram(configDiagram(graph), { preference, width: availableWidth, height: availableHeight })
+  const byId = new Map(layout.nodes.map(node => [node.id, node]))
+  return { ...layout, nodes: graph.nodes.map(node => ({ ...node, ...byId.get(node.id) })) }
 }
 
 export function matchGraphNode(graph, query) {

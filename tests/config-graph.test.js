@@ -34,7 +34,7 @@ test('capacity derives active length with rounding and compares it to a separate
   assert.ok(graph.nodes.some(n => n.position.surface === 'ESI' && n.name.includes('BitLen')))
   assert.ok(graph.edges.find(e => e.source === 'field-esi-output-default').description.includes('不画为恒等'))
 })
-test('CoE grouping separates a 16bit object index from its independent 8bit subindex', () => {
+test('CoE grouping separates a 16bit object index from its independent 8bit subindex', async () => {
   const graph = buildConfigGraph(entryMap.get('min-pd-cycle-time'), entries)
   const field = graph.nodes.find(node => node.id === 'object-1c32-05')
   assert.equal(field.parentId, 'object-1c32')
@@ -42,7 +42,7 @@ test('CoE grouping separates a 16bit object index from its independent 8bit subi
   assert.equal(field.addressParts.index >> 8, 0x1c)
   assert.equal(field.addressParts.index & 255, 0x32)
   for (const preference of ['horizontal', 'vertical']) {
-    const layout = layoutConfigGraph(graph, preference)
+    const layout = await layoutConfigGraph(graph, preference)
     for (const child of layout.nodes.filter(node => node.parentId)) {
       assert.ok(child.x >= 0 && child.y >= 0)
       assert.ok(child.x + NODE_WIDTH <= GROUP_WIDTH)
@@ -93,13 +93,13 @@ test('identity fields use actual labels and keep CoE addresses as graph endpoint
   assert.ok(graph.nodes.some(n => n.kind === 'object' && n.name === '0x1009'))
   assert.ok(graph.nodes.some(n => n.kind === 'subentry' && n.identifier === '0x1009:00'))
 })
-test('one Identity object contains four related subitems without duplicating the parent', () => {
+test('one Identity object contains four related subitems without duplicating the parent', async () => {
   const graph = buildConfigGraph(entryMap.get('coe-identity'), entries)
   const parent = graph.nodes.find(n => n.name === '0x1018' && n.isGroup)
   assert.ok(parent)
   const children = graph.nodes.filter(n => n.parentId === parent.id)
   assert.equal(children.length, 4)
-  const layout = layoutConfigGraph(graph)
+  const layout = await layoutConfigGraph(graph)
   for (const child of layout.nodes.filter(n => n.parentId === parent.id)) assert.ok(child.y + child.nodeHeight <= parent.groupHeight)
 })
 test('timing models select the correct subitem and treat delay zero as a fixed description', () => {
@@ -167,13 +167,13 @@ test('expanded graphs retain unique nodes and all parent/edge references', () =>
   assert.ok(timing.nodes.some(n => n.id === 'max-pd-cycle-time'))
   assert.ok(timing.edges.some(e => e.label === 'MIN ≤ MAX'))
 })
-test('layout directions stay deterministic and node boxes do not overlap', () => {
+test('layout directions stay deterministic and node boxes do not overlap', async () => {
   const graph = buildConfigGraph(entryMap.get('max-pd-output-size'), entries, { expanded: true })
   for (const preference of ['horizontal', 'vertical']) {
-    const layout = layoutConfigGraph(graph, preference)
+    const layout = await layoutConfigGraph(graph, preference)
     assert.equal(layout.direction, preference === 'horizontal' ? 'LR' : 'TB')
     for (const [i, a] of layout.nodes.entries()) for (const b of layout.nodes.slice(i + 1)) assert.ok(a.x + NODE_WIDTH <= b.x || b.x + NODE_WIDTH <= a.x || a.y + NODE_HEIGHT <= b.y || b.y + NODE_HEIGHT <= a.y, `${a.id} overlaps ${b.id}`)
-    assert.deepEqual(layout, layoutConfigGraph(graph, preference))
+    assert.deepEqual(layout, await layoutConfigGraph(graph, preference))
   }
-  assert.equal(layoutConfigGraph(graph, 'auto', 390, 600).direction, 'TB')
+  assert.equal((await layoutConfigGraph(graph, 'auto', 390, 600)).direction, 'TB')
 })

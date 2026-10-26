@@ -1,4 +1,4 @@
-import dagre from '@dagrejs/dagre'
+import { layoutDiagram } from './graph-layout.js'
 
 export function buildEsiFieldGraph(row,context){
   const nodes=[{id:'current',focal:true,surface:'ESI',role:'当前文件',title:row.label,path:row.key,value:row.value}],edges=[]
@@ -24,14 +24,12 @@ export function buildEsiFieldGraph(row,context){
   return {nodes,edges,scope:context.ownerScope?.owner.id||context.scope?.device.id}
 }
 
-export function layoutEsiFieldGraph(model){
-  const g=new dagre.graphlib.Graph().setDefaultEdgeLabel(()=>({}))
-  g.setGraph({rankdir:'LR',ranksep:84,nodesep:24,marginx:20,marginy:20})
-  model.nodes.forEach(n=>g.setNode(n.id,{width:236,height:132}));model.edges.forEach(e=>g.setEdge(e.source,e.target));dagre.layout(g)
-  const linear=model.nodes.length>=3&&model.edges.length===model.nodes.length-1&&model.nodes.every(n=>model.edges.filter(e=>e.source===n.id).length<=1&&model.edges.filter(e=>e.target===n.id).length<=1)
-  const positions=new Map()
-  if(linear){let n=model.nodes.find(n=>!model.edges.some(e=>e.target===n.id)),i=0;while(n&&i<model.nodes.length){const row=Math.floor(i/2),col=row%2?1-i%2:i%2;positions.set(n.id,{x:col*320,y:row*182});const target=model.edges.find(e=>e.source===n.id)?.target;n=model.nodes.find(n=>n.id===target);i++}}
-  const nodes=model.nodes.map(n=>({...n,position:positions.get(n.id)||{x:g.node(n.id).x-118,y:g.node(n.id).y-66}}))
-  const edges=model.edges.map(e=>{const a=nodes.find(n=>n.id===e.source).position,b=nodes.find(n=>n.id===e.target).position,vertical=b.y!==a.y,forward=b.x>a.x;return {...e,sourceHandle:'out-'+(vertical?'bottom':forward?'right':'left'),targetHandle:'in-'+(vertical?'top':forward?'left':'right')}})
-  return {nodes,edges}
+export function esiFieldDiagram(model) {
+  return { nodes: model.nodes.map(node => ({ id: node.id, width: 236, height: 132 })), edges: model.edges.map(edge => ({ id: edge.id, source: edge.source, target: edge.target, label: edge.label, labelFontSize: 11 })) }
+}
+export async function layoutEsiFieldGraph(model, width = 600, height = 500) {
+  const layout = await layoutDiagram(esiFieldDiagram(model), { width, height })
+  const byId = new Map(layout.nodes.map(node => [node.id, node]))
+  const routes = new Map(layout.edges.map(edge => [edge.id, edge]))
+  return { ...layout, nodes: model.nodes.map(node => ({ ...node, ...byId.get(node.id), position: { x: byId.get(node.id).x, y: byId.get(node.id).y } })), edges: model.edges.map(edge => ({ ...edge, ...routes.get(edge.id) })) }
 }

@@ -1,0 +1,6 @@
+ELK.js 0.12.0 is distributed unmodified under the Eclipse Public License 2.0.
+Copyright holders and notices are preserved in the distributed library.
+Source: https://github.com/kieler/elkjs/tree/0.12.0
+License: elkjs-LICENSE.md
+
+ELK runs locally as a Web Worker. No graph data is sent to an external service.

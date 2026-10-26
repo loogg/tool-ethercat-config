@@ -1,8 +1,8 @@
 import { ConceptText } from './ConceptHelp.jsx'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ReactFlow, ReactFlowProvider, Handle, Position, Background, BackgroundVariant, Controls, ControlButton, MarkerType } from '@xyflow/react'
+import { ReactFlow, ReactFlowProvider, Background, BackgroundVariant, ControlButton, MarkerType } from '@xyflow/react'
 import { ArrowRight, ArrowUpRight, Bookmark, BookOpen, Calculator, ChevronDown, Crosshair, Focus, GitBranch, Info, Layers3, List, PanelRightClose, PanelRightOpen, RotateCcw, Workflow, X } from 'lucide-react'
-import { buildConfigGraph, filterConfigGraph, entryNode, layoutConfigGraph, matchGraphNode, nodeKindLabels, relationKinds, GROUP_WIDTH, GROUP_HEIGHT } from '../lib/config-graph.js'
+import { buildConfigGraph, filterConfigGraph, entryNode, configDiagram, matchGraphNode, nodeKindLabels, relationKinds } from '../lib/config-graph.js'
 import { CopyButton } from './Article.jsx'
 import Calculators from './Calculators.jsx'
 import TimingWorkbench from './TimingWorkbench.jsx'
@@ -11,22 +11,22 @@ import { CrossSourceDialog } from './CrossSourceReferences.jsx'
 import { contractsForEntry, crossSourceSelection } from '../lib/cross-source-model.js'
 import '@xyflow/react/dist/style.css'
 import './config-graph.css'
+import { useResponsiveDiagram } from '../lib/use-responsive-diagram.js'
+import { RoutedHandles, ResponsiveViewport, DiagramStatus, DiagramControls } from './RoutedDiagram.jsx'
+import { routedEdgeTypes, nodeHandles } from './diagram-types.js'
 
-const handles = ['left', 'right', 'top', 'bottom']
 function FieldNode({ data }) {
   const item = data.item
-  return <div className={`field-node kind-${item.kind} ${data.focal ? 'focal-node' : ''} ${data.dimmed ? 'dimmed-node' : ''} ${item.compact ? 'compact-subentry' : ''} ${item.status ? 'error-node' : ''}`} style={{ height: item.nodeHeight || 148 }}>
-    {handles.map(side => <Handle key={`target-${side}`} id={`in-${side}`} type="target" position={Position[side[0].toUpperCase() + side.slice(1)]} isConnectable={false} />)}
-    {handles.map(side => <Handle key={`source-${side}`} id={`out-${side}`} type="source" position={Position[side[0].toUpperCase() + side.slice(1)]} isConnectable={false} />)}
+  return <><RoutedHandles ports={item.ports} /><div className={`field-node kind-${item.kind} ${data.focal ? 'focal-node' : ''} ${data.dimmed ? 'dimmed-node' : ''} ${item.compact ? 'compact-subentry' : ''} ${item.status ? 'error-node' : ''}`} style={{ height: item.nodeHeight || 148 }}>
     <div className="field-node-top"><span className="node-surface">{item.position.surface}</span><span className="node-kind">{item.status === 'over-capacity' ? '容量不足' : item.status === 'invalid' ? '输入待修正' : data.focal ? '当前配置' : nodeKindLabels[item.kind]}</span></div>
     <div className="node-parent" title={item.position.parent}>{item.position.parent}</div>
     <strong className="node-key" title={item.name}>{item.name}</strong>
     <div className="node-fields">{item.fields.slice(0, 2).map((field, i) => <div key={i}><span>{field.label}</span><strong title={field.value}>{field.value}</strong></div>)}</div>
-  </div>
+  </div></>
 }
 function ObjectContainer({ data }) {
   const item = data.item
-  return <div className={`object-container ${data.dimmed ? 'dimmed-node' : ''}`}><div className="object-container-type"><span>CoE 对象 · Index 16 bit</span><span>{item.scope}</span></div><strong>{item.name}</strong><div className="object-index-bytes"><span>15:8 <b>0x{(item.addressParts.index >> 8).toString(16).toUpperCase().padStart(2, '0')}</b></span><span>7:0 <b>0x{(item.addressParts.index & 255).toString(16).toUpperCase().padStart(2, '0')}</b></span><small>↓ 子索引 SubIndex</small></div></div>
+  return <><RoutedHandles ports={item.ports} /><div className={`object-container ${data.dimmed ? 'dimmed-node' : ''}`}><div className="object-container-type"><span>CoE 对象 · Index 16 bit</span><span>{item.scope}</span></div><strong>{item.name}</strong><div className="object-index-bytes"><span>15:8 <b>0x{(item.addressParts.index >> 8).toString(16).toUpperCase().padStart(2, '0')}</b></span><span>7:0 <b>0x{(item.addressParts.index & 255).toString(16).toUpperCase().padStart(2, '0')}</b></span><small>↓ 子索引 SubIndex</small></div></div></>
 }
 const nodeTypes = { field: FieldNode, objectContainer: ObjectContainer }
 
@@ -111,34 +111,23 @@ function GraphContent({ entry, entries, onNavigate, saved, onSave, onFeedback, h
   const [crossOpen, setCrossOpen] = useState(false)
   const [filter, setFilter] = useState('all')
   const [selection, setSelection] = useState(() => ({ type: 'node', id: null }))
-  const [bounds, setBounds] = useState({ width: 900, height: 620 })
-  const canvasRef = useRef(null)
   const flowRef = useRef(null)
   const graph = useMemo(() => buildConfigGraph(entry, entries, { expanded, cycleValue, bitLengths, capacity, memory }), [entry, entries, expanded, cycleValue, bitLengths, capacity, memory])
   const filtered = useMemo(() => filterConfigGraph(graph, filter), [graph, filter])
-  const layout = useMemo(() => layoutConfigGraph(filtered, preference, bounds.width - 40, bounds.height - 40), [filtered, preference, bounds])
+  const model = useMemo(() => configDiagram(filtered), [filtered])
+  const { attachCanvas, ...diagram } = useResponsiveDiagram(model, { preference, enabled: view === 'graph' })
+  const layout = useMemo(() => {
+    if (!diagram.layout) return { direction: diagram.direction, width: 0, height: 0, nodes: [], edges: [] }
+    const byId = new Map(diagram.layout.nodes.map(node => [node.id, node]))
+    return { ...diagram.layout, nodes: filtered.nodes.map(node => ({ ...node, ...byId.get(node.id) })) }
+  }, [diagram.layout, diagram.direction, filtered])
   const selectedId = selection.id || matchGraphNode(graph, highlightQuery) || graph.rootId
   const selectedEdge = selection.type === 'edge' ? filtered.edges.find(e => e.id === selectedId) : null
   const selectedNode = filtered.nodes.find(n => n.id === selectedId) || graph.nodes.find(n => n.id === graph.rootId)
   const emphasized = selectedEdge ? new Set([selectedEdge.source, selectedEdge.target]) : null
-  const nodes = layout.nodes.map(item => ({ id: item.id, type: item.isGroup ? 'objectContainer' : 'field', parentId: item.parentId, extent: item.parentId ? 'parent' : undefined, style: item.isGroup ? { width: GROUP_WIDTH, height: item.groupHeight || GROUP_HEIGHT } : undefined, position: { x: item.x, y: item.y }, data: { item, focal: item.id === graph.rootId, dimmed: emphasized && !emphasized.has(item.id) && !graph.nodes.some(child => child.parentId === item.id && emphasized.has(child.id)) }, selected: !selectedEdge && item.id === selectedNode.id, draggable: false, connectable: false, selectable: true, ariaLabel: `${item.position.surface} ${item.position.parent} ${item.name}` }))
-  const edges = filtered.edges.map(link => ({ id: link.id, source: link.source, target: link.target, sourceHandle: `out-${layout.direction === 'LR' ? 'right' : 'bottom'}`, targetHandle: `in-${layout.direction === 'LR' ? 'left' : 'top'}`, type: 'smoothstep', label: link.label, selected: link.id === selectedEdge?.id, style: { stroke: link.failed ? '#bd5b42' : link.id === selectedEdge?.id ? '#2563eb' : relationKinds[link.kind].color, strokeWidth: link.id === selectedEdge?.id ? 2.4 : 1.5, strokeDasharray: relationKinds[link.kind].directed ? undefined : '5 4' }, markerEnd: relationKinds[link.kind].directed ? { type: MarkerType.ArrowClosed, color: link.failed ? '#bd5b42' : relationKinds[link.kind].color, width: 16, height: 16 } : undefined, labelStyle: { fill: '#4d6079', fontSize: 12, fontWeight: 500 }, labelBgStyle: { fill: '#fff', fillOpacity: .96 }, labelBgPadding: [7, 5], labelBgBorderRadius: 4, interactionWidth: 24, ariaLabel: `${link.label}：${(graph.nodes.find(n => n.id === link.source)?.identifier || graph.nodes.find(n => n.id === link.source)?.name)} 到 ${(graph.nodes.find(n => n.id === link.target)?.identifier || graph.nodes.find(n => n.id === link.target)?.name)}` }))
+  const nodes = layout.nodes.map(item => ({ id: item.id, type: item.isGroup ? 'objectContainer' : 'field', parentId: item.parentId, extent: item.parentId ? 'parent' : undefined, style: { width: item.width, height: item.height }, initialWidth: item.width, initialHeight: item.height, handles: nodeHandles(item), position: { x: item.x, y: item.y }, data: { item, focal: item.id === graph.rootId, dimmed: emphasized && !emphasized.has(item.id) && !graph.nodes.some(child => child.parentId === item.id && emphasized.has(child.id)) }, selected: !selectedEdge && item.id === selectedNode.id, draggable: false, connectable: false, selectable: true, ariaLabel: `${item.position.surface} ${item.position.parent} ${item.name}` }))
+  const edges = layout.edges.map(route => { const link = filtered.edges.find(edge => edge.id === route.id); return ({ id: link.id, source: link.source, target: link.target, sourceHandle: route.sourceHandle, targetHandle: route.targetHandle, type: 'routed', data: { route }, label: link.label, selected: link.id === selectedEdge?.id, style: { stroke: link.failed ? '#bd5b42' : link.id === selectedEdge?.id ? '#2563eb' : relationKinds[link.kind].color, strokeWidth: link.id === selectedEdge?.id ? 2.4 : 1.5, strokeDasharray: relationKinds[link.kind].directed ? undefined : '5 4' }, markerEnd: relationKinds[link.kind].directed ? { type: MarkerType.ArrowClosed, color: link.failed ? '#bd5b42' : relationKinds[link.kind].color, width: 16, height: 16 } : undefined, labelStyle: { fill: '#4d6079', fontSize: 12, fontWeight: 500 }, labelBgStyle: { fill: '#fff', fillOpacity: .96 }, labelBgPadding: [7, 5], labelBgBorderRadius: 4, interactionWidth: 24, ariaLabel: `${link.label}：${(graph.nodes.find(n => n.id === link.source)?.identifier || graph.nodes.find(n => n.id === link.source)?.name)} 到 ${(graph.nodes.find(n => n.id === link.target)?.identifier || graph.nodes.find(n => n.id === link.target)?.name)}` }) })
 
-  useEffect(() => {
-    const target = canvasRef.current
-    if (!target) return
-    const observer = new ResizeObserver(([record]) => setBounds(previous => {
-      const next = { width: Math.round(record.contentRect.width), height: Math.round(record.contentRect.height) }
-      return previous.width === next.width && previous.height === next.height ? previous : next
-    }))
-    observer.observe(target)
-    return () => observer.disconnect()
-  }, [])
-  useEffect(() => {
-    if (view !== 'graph') return
-    const frame = requestAnimationFrame(() => { flowRef.current?.fitView({ padding: .12, minZoom: .78, maxZoom: 1, duration: 0 }) })
-    return () => cancelAnimationFrame(frame)
-  }, [layout.direction, layout.width, layout.height, bounds, view])
 
   function select(next) { setSelection(next); setShowInspector(true) }
   function openCalculator(tool, parameters = null) { setWatchdogContext(parameters); setCalculatorTool(tool) }
@@ -153,17 +142,20 @@ function GraphContent({ entry, entries, onNavigate, saved, onSave, onFeedback, h
   function focusCurrent() {
     setSelection({ type: 'node', id: graph.rootId })
     const root = layout.nodes.find(n => n.id === graph.rootId)
+    if (!root) return
+    diagram.pauseAuto()
     flowRef.current?.setCenter(root.x + 129, root.y + 74, { zoom: 1, duration: 180 })
   }
   const header = entryNode(entry)
   const calculatorContext = { watchdog: watchdogContext, mappingWord: graph.nodes.find(node => node.mappingParts)?.mappingParts.word !== undefined ? `0x${graph.nodes.find(node => node.mappingParts).mappingParts.word.toString(16)}` : undefined, controlByte: graph.nodes.find(node => node.controlByte)?.controlByte.hex, memory: graph.buffer?.valid ? { ...memory, smIndex: entry.id === 'max-pd-input-size' ? 3 : 2, length: String(graph.scenario.bytes) } : undefined }
   return <section className={`config-workspace ${showInspector ? '' : 'inspector-hidden'}`} aria-label="配置关系工作台">
     <header className="config-titlebar"><div><h1>{entry.name}</h1><span>{entry.title.replace(`${entry.name}：`, '')}</span></div><div className="config-title-actions">{contractsForEntry(entry.id).length>0&&<button className="config-cross-trigger" onClick={()=>setCrossOpen(true)}><GitBranch size={14}/>跨文件对应</button>}<button className={`icon-button ${saved ? 'is-saved' : ''}`} onClick={() => onSave(entry.id)} aria-label={saved ? '取消收藏此配置' : '收藏此配置'} aria-pressed={saved}><Bookmark size={16} fill={saved ? 'currentColor' : 'none'} /></button><CopyButton iconOnly text={`${location.href.split('#')[0]}#/entry/${entry.id}`} label="复制配置链接" onFeedback={onFeedback} /></div></header>
-    <div className="graph-workbench"><div className="graph-main"><div className="graph-toolbar"><span className="graph-title"><Workflow size={15} />{view === 'timing' ? '时序理解' : '配置关系'}<span title={graph.profile.rationale}>{graph.profile.label}</span>{view !== 'timing' && <span>{filtered.nodes.length} 节点</span>}</span><div className="graph-view-switch" aria-label="关系呈现"><button aria-pressed={view === 'graph'} onClick={() => setView('graph')}><GitBranch size={14} />图</button><button aria-pressed={view === 'list'} onClick={() => setView('list')}><List size={14} />列表</button>{timingLesson && <button aria-pressed={view === 'timing'} onClick={() => { setView('timing'); setShowInspector(false) }}>时序图示</button>}</div>{view !== 'timing' && <><label className="graph-direction"><span className="sr-only">排列方向</span><select aria-label="排列方向" value={preference} onChange={e => setPreference(e.target.value)}><option value="auto">自动 · {layout.direction === 'LR' ? '横向' : '纵向'}</option><option value="horizontal">横向 →</option><option value="vertical">纵向 ↓</option></select></label><label className="graph-filter"><span className="sr-only">关系筛选</span><select aria-label="关系筛选" value={filter} onChange={e => setFilter(e.target.value)}><option value="all">全部关系</option><option value="directed">有向关系</option><option value="described">描述与对应</option></select></label><button className="icon-button" aria-label={showInspector ? '收起检查器' : '展开检查器'} onClick={() => setShowInspector(!showInspector)}>{showInspector ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}</button></>}</div>
-      <div className={`graph-canvas ${view === 'list' ? 'outline-mode' : view === 'timing' ? 'watchdog-timing-mode' : ''}`} ref={canvasRef} onKeyDownCapture={handleCanvasKey}>
-        {view === 'timing' ? <TimingWorkbench key={timingLesson} lesson={timingLesson} focusId={entry.id} onCalculate={parameters => openCalculator('watchdog', parameters)} /> : view === 'graph' ? <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView fitViewOptions={{ padding: .12, minZoom: .78, maxZoom: 1 }} minZoom={.35} maxZoom={1.6} onInit={api => { flowRef.current = api }} onNodeClick={(_, node) => select({ type: 'node', id: node.id })} onEdgeClick={(_, link) => select({ type: 'edge', id: link.id })} onNodeDoubleClick={(_, node) => node.data.item.entryId && node.id !== graph.rootId && onNavigate(node.data.item.entryId)} onPaneClick={() => setSelection({ type: 'node', id: graph.rootId })} nodesDraggable={false} nodesConnectable={false} edgesReconnectable={false} deleteKeyCode={null} panOnScroll zoomOnScroll={false} zoomOnDoubleClick={false} elevateEdgesOnSelect edgesFocusable nodesFocusable ariaLabelConfig={{ 'node.a11yDescription.default': '按 Enter 选择节点；使用列表视图阅读全部关系。', 'edge.a11yDescription.default': '按 Enter 选择关系；可在检查器阅读条件。', 'controls.zoomIn.ariaLabel': '放大关系图', 'controls.zoomOut.ariaLabel': '缩小关系图', 'controls.fitView.ariaLabel': '适应视图' }}>
-          <Background variant={BackgroundVariant.Dots} gap={22} size={1} color="#d7dee8" /><Controls showInteractive={false}><ControlButton onClick={focusCurrent} title="定位当前配置" aria-label="定位当前配置"><Crosshair size={16} /></ControlButton><ControlButton onClick={() => flowRef.current?.zoomTo(1)} title="100% 阅读" aria-label="100% 阅读"><Focus size={15} /></ControlButton></Controls>
+    <div className="graph-workbench"><div className="graph-main"><div className="graph-toolbar"><span className="graph-title"><Workflow size={15} />{view === 'timing' ? '时序理解' : '配置关系'}<span title={graph.profile.rationale}>{graph.profile.label}</span>{view !== 'timing' && <span>{filtered.nodes.length} 节点</span>}</span><div className="graph-view-switch" aria-label="关系呈现"><button aria-pressed={view === 'graph'} onClick={() => { setView('graph'); diagram.resumeAuto() }}><GitBranch size={14} />图</button><button aria-pressed={view === 'list'} onClick={() => setView('list')}><List size={14} />列表</button>{timingLesson && <button aria-pressed={view === 'timing'} onClick={() => { setView('timing'); setShowInspector(false) }}>时序图示</button>}</div>{view !== 'timing' && <><label className="graph-direction"><span className="sr-only">排列方向</span><select aria-label="排列方向" value={preference} onChange={e => setPreference(e.target.value)}><option value="auto">自动 · {layout.direction === 'LR' ? '横向' : '纵向'}</option><option value="horizontal">横向 →</option><option value="vertical">纵向 ↓</option></select></label><label className="graph-filter"><span className="sr-only">关系筛选</span><select aria-label="关系筛选" value={filter} onChange={e => setFilter(e.target.value)}><option value="all">全部关系</option><option value="directed">有向关系</option><option value="described">描述与对应</option></select></label><button className="icon-button" aria-label={showInspector ? '收起检查器' : '展开检查器'} onClick={() => setShowInspector(!showInspector)}>{showInspector ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}</button></>}</div>
+      <div className={`graph-canvas diagram-canvas ${view === 'list' ? 'outline-mode' : view === 'timing' ? 'watchdog-timing-mode' : ''}`} ref={attachCanvas} onKeyDownCapture={handleCanvasKey}>
+        {view === 'timing' ? <TimingWorkbench key={timingLesson} lesson={timingLesson} focusId={entry.id} onCalculate={parameters => openCalculator('watchdog', parameters)} /> : view === 'graph' ? <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} edgeTypes={routedEdgeTypes} onMove={diagram.onMove} minZoom={.1} maxZoom={1.6} onInit={api => { flowRef.current = api }} onNodeClick={(_, node) => select({ type: 'node', id: node.id })} onEdgeClick={(_, link) => select({ type: 'edge', id: link.id })} onNodeDoubleClick={(_, node) => node.data.item.entryId && node.id !== graph.rootId && onNavigate(node.data.item.entryId)} onPaneClick={() => setSelection({ type: 'node', id: graph.rootId })} nodesDraggable={false} nodesConnectable={false} edgesReconnectable={false} deleteKeyCode={null} panOnScroll zoomOnScroll={false} zoomOnDoubleClick={false} elevateEdgesOnSelect edgesFocusable nodesFocusable ariaLabelConfig={{ 'node.a11yDescription.default': '按 Enter 选择节点；使用列表视图阅读全部关系。', 'edge.a11yDescription.default': '按 Enter 选择关系；可在检查器阅读条件。', 'controls.zoomIn.ariaLabel': '放大关系图', 'controls.zoomOut.ariaLabel': '缩小关系图', 'controls.fitView.ariaLabel': '适应视图' }}>
+          <ResponsiveViewport diagram={diagram} /><Background variant={BackgroundVariant.Dots} gap={22} size={1} color="#d7dee8" /><DiagramControls diagram={diagram}><ControlButton onClick={focusCurrent} title="定位当前配置" aria-label="定位当前配置"><Crosshair size={16} /></ControlButton><ControlButton onClick={() => { diagram.pauseAuto(); flowRef.current?.zoomTo(1) }} title="100% 阅读" aria-label="100% 阅读"><Focus size={15} /></ControlButton></DiagramControls>
         </ReactFlow> : <div className="graph-outline"><div className="outline-root"><small>{header.position.surface} › {header.position.parent}</small><strong>{entry.name}</strong><p>{header.brief}</p></div>{filtered.edges.map(link => <button className={`outline-relation ${selectedEdge?.id === link.id || (!selectedEdge && selectedNode.id !== graph.rootId && [link.source, link.target].includes(selectedNode.id)) ? 'selected' : ''}`} key={link.id} onClick={() => select({ type: 'edge', id: link.id })}><span className="relation-kind">{link.label}</span><span>{graph.nodes.find(n => n.id === link.source)?.name}<ArrowRight size={13} />{graph.nodes.find(n => n.id === link.target)?.name}</span><small className="outline-paths">{graph.nodes.find(n => n.id === link.source)?.position.surface} › {graph.nodes.find(n => n.id === link.source)?.position.parent} → {graph.nodes.find(n => n.id === link.target)?.position.surface} › {graph.nodes.find(n => n.id === link.target)?.position.parent}</small><small>{link.description}</small></button>)}{!filtered.edges.length && <p className="graph-empty">当前筛选下没有关联；可选择“全部关系”或查阅右侧说明。</p>}</div>}
+        {view === 'graph' && <DiagramStatus diagram={diagram} />}
         {view === 'graph' && !filtered.edges.length && <div className="graph-empty-floating">本项暂无已记录的直接连线。说明与来源可在检查器中查看。</div>}
         {graph.extraCount > 0 && <button className="graph-expand" onClick={() => setExpanded(true)}>展开更多{graph.sample === 'capacity' ? '来源' : '关联'}<span>+{graph.extraCount}</span></button>}
         {expanded && <button className="graph-expand" onClick={() => setExpanded(false)}><RotateCcw size={13} />回到直接关系</button>}
