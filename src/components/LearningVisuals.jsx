@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { ArrowLeft, ArrowRight, Cable, Check, Cpu, Database, FileCode2, HardDrive, Layers3, Network, Pause, Play, Radio, RotateCcw, Server } from 'lucide-react'
-import { alStates, errorIndicators, ledPatterns, objectShapes } from '../data/learning.js'
-import { fmmuLesson, learningTypes, ledIsOn, pdoLesson, synchronizationLesson, watchdogLesson } from '../lib/learning-model.js'
+import { alStates, errorIndicators, learningEvidence, ledPatterns, objectShapes } from '../data/learning.js'
+import { fmmuLesson, learningTypes, ledTimeline, pdoLesson, synchronizationLesson, watchdogLesson } from '../lib/learning-model.js'
 import { watchdogScenarios } from '../lib/watchdog-timing.js'
 import SscObjectAlignment from './SscObjectAlignment.jsx'
 
@@ -164,34 +164,51 @@ function WatchdogVisual({ context, values, onValues, onReset, onTiming }) {
   </div>
 }
 
-function LedTrack({ name, patternId, colour, time }) {
-  const pattern = ledPatterns[patternId], intervals = []
-  for (let start = 0; start < 1600; start += pattern.period) for (const [a, b] of pattern.pulses) if (start + a < 1600) intervals.push([start + a, Math.min(start + b, 1600)])
-  const on = ledIsOn(patternId, time)
-  return <div className={`learn-led-track colour-${colour}`}><div className="learn-led-identification"><span className={`learn-led ${on ? 'is-on' : ''}`} aria-hidden="true" /><div><strong>{name}</strong><small>{pattern.label}</small></div></div><div className="learn-led-signal"><div className="learn-led-wave" role="img" aria-label={`${name}，${pattern.text}，当前${on ? '亮' : '灭'}`}>{intervals.map(([start, end]) => <span key={start} style={{ left: `${start / 16}%`, width: `${(end - start) / 16}%` }} />)}<i style={{ left: `${time % 1600 / 16}%` }} /></div><small>{pattern.text}</small></div></div>
+function LedTrack({ name, colour, track, cursor, windowMs }) {
+  const { pattern, intervals, on } = track
+  return <div className={`learn-led-track colour-${colour}`}>
+    <div className="learn-led-identification"><span className={`learn-led ${on ? 'is-on' : ''}`} aria-hidden="true" /><div><strong>{name}<em className="learn-led-current">{on ? '亮' : '灭'}</em></strong><small>{pattern.label}</small></div></div>
+    <div className="learn-led-signal"><div className="learn-led-wave" role="img" aria-label={`${name}，${pattern.text}，当前${on ? '亮' : '灭'}`}>{intervals.map(([start, end]) => <span key={start} style={{ left: `${start / windowMs * 100}%`, width: `${(end - start) / windowMs * 100}%` }} />)}<i style={{ left: `${cursor / windowMs * 100}%` }} /></div><small>{pattern.text}</small></div>
+  </div>
 }
 function StateVisual({ context, values, onValues, onStep, onTiming }) {
-  const [playing, setPlaying] = useState(false), [time, setTime] = useState(0)
+  const state = alStates[context.step], selectedError = errorIndicators.find(item => item.id === values.error)
+  const error = selectedError || errorIndicators[0], run = values.bootstrap ? 'flicker' : state.run
+  const clockKey = `${values.error}:${run}`, errorGroup = useId()
+  const [clock, setClock] = useState({ key: clockKey, playing: false, time: 0 })
+  if (clock.key !== clockKey) setClock({ key: clockKey, playing: false, time: 0 })
+  const { playing, time } = clock.key === clockKey ? clock : { playing: false, time: 0 }
+  const model = ledTimeline({ run, error: error.pattern, time })
   const [reduced, setReduced] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches)
   useEffect(() => {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)')
-    const change = () => { setReduced(media.matches); if (media.matches) setPlaying(false) }
+    const change = () => { setReduced(media.matches); if (media.matches) setClock(previous => ({ ...previous, playing: false })) }
     media.addEventListener('change', change)
     return () => media.removeEventListener('change', change)
   }, [])
   useEffect(() => {
-    if (!playing || reduced) return
-    const timer = setInterval(() => setTime(previous => previous + 25), 25)
+    if (!playing || reduced || !selectedError) return
+    const timer = setInterval(() => setClock(previous => ({ key: clockKey, playing: true, time: ((previous.key === clockKey ? previous.time : 0) + 25) % model.windowMs })), 25)
     return () => clearInterval(timer)
-  }, [playing, reduced])
-  const state = alStates[context.step], error = errorIndicators.find(item => item.id === values.error) || errorIndicators[0]
-  const run = values.bootstrap ? 'flicker' : state.run
+  }, [playing, reduced, selectedError, clockKey, model.windowMs])
+  function updateClock(patch) { setClock(previous => ({ ...(previous.key === clockKey ? previous : { key: clockKey, playing: false, time: 0 }), ...patch })) }
+  function selectError(id) { setClock({ key: `${id}:${run}`, playing: false, time: 0 }); onValues({ error: id }) }
   return <div className="learn-visual"><div className="learn-al-chain">{alStates.map((item, i) => <DiagramNode key={item.id} eyebrow={item.label} title={item.id} active={!values.bootstrap && context.step === i} onClick={() => onStep(i)}>{['通信初始化', '邮箱参数通信', '输入可用 / 输出安全', '正常过程数据'][i]}</DiagramNode>)}</div>
     <div className="learn-state-tools"><span>当前 <strong>{values.bootstrap ? 'BOOT · 升级分支' : state.id}</strong></span><button aria-pressed={values.bootstrap} onClick={() => onValues({ bootstrap: !values.bootstrap })}>BOOT · 支持时的升级分支</button></div>
     <div className="learn-state-capabilities">{values.bootstrap ? <><span>升级通信按固件支持</span><span>不进入正常周期输出</span></> : <><span className={state.mailbox ? 'available' : ''}>邮箱 {state.mailbox ? '可用' : '未开放'}</span><span className={state.inputs ? 'available' : ''}>过程输入 {state.inputs ? '可更新' : '未开放'}</span><span className={state.outputs ? 'available' : ''}>过程输出 {state.outputs ? '可运行' : '保持安全'}</span></>}</div>
-    <div className="learn-led-lab"><div className="learn-diagram-label">观察灯态 <small>RUN随所选AL状态；ERR独立查阅</small></div><label className="learn-error-select">ERR参考类型<select aria-label="ERR参考类型" value={error.id} onChange={event => onValues({ error: event.target.value })}>{errorIndicators.map(item => <option value={item.id} key={item.id}>{item.label}</option>)}</select></label><LedTrack name="RUN · 绿色" patternId={run} colour="green" time={time} /><LedTrack name="ERR · 红色" patternId={error.pattern} colour="red" time={time} />
-      <div className="learn-led-controls"><button disabled={reduced} onClick={() => setPlaying(!playing)}>{playing ? <Pause size={14} /> : <Play size={14} />}{reduced ? '减少动画：手动观察' : playing ? '暂停灯效' : '播放灯效'}</button><label>观察时刻<input type="range" min="0" max="1599" value={Math.floor(time % 1600)} aria-label="灯效观察时刻" onChange={event => { setPlaying(false); setTime(Number(event.target.value)) }} /><output>{Math.floor(time % 1600)} ms</output></label><button aria-label="灯效回到起点" onClick={() => { setPlaying(false); setTime(0) }}><RotateCcw size={14} /></button></div><p className="learn-led-explanation">{error.explanation}</p>
-    </div><details className="learn-deeper"><summary>EtherCAT OP与CiA402驱动使能怎样区分？</summary><p>AL状态描述通信；CiA402的PDS状态描述驱动控制。通信在OP时，驱动仍可能处于Switch on disabled或Fault。</p><button className="learn-inline-action" onClick={() => onTiming('drive')}><Play size={14} />对照控制字、状态字和驱动状态</button></details><FigureNote>灯态采用常见EtherCAT指示方式作教学对照，非设备仿真。具体灯色、支持模式与覆盖行为按型号手册，错误应结合AL Status Code核对。</FigureNote>
+    <div className="learn-led-lab">
+      <div className="learn-diagram-label">观察灯态 <small>RUN看通信状态 · ERR看错误类型</small></div>
+      <fieldset className="learn-error-scenes"><legend>ERR 故障场景</legend><div>{errorIndicators.map(item => <label key={item.id} className={values.error === item.id ? 'is-selected' : ''}><input type="radio" name={errorGroup} checked={values.error === item.id} onChange={() => selectError(item.id)} aria-label={`${item.label} · ${ledPatterns[item.pattern].shortLabel}`} /><span><strong>{item.label}</strong><small>ERR {ledPatterns[item.pattern].shortLabel}</small></span></label>)}</div></fieldset>
+      {!selectedError ? <LearningError error="链接中的ERR场景未识别，请选择上方六种场景之一。" onReset={() => selectError('none')} /> : <>
+        <div className={`learn-led-explanation ${error.id === 'none' ? '' : 'has-error'}`} role="status"><strong>{error.label} → ERR {ledPatterns[error.pattern].shortLabel}</strong><p>{error.explanation}</p></div>
+        <div className="learn-led-axis"><span>共用时间轴 · ms</span><div>{[0, model.windowMs / 2, model.windowMs].map(at => <span key={at}>{at}</span>)}</div></div>
+        <LedTrack name="RUN · 绿色" colour="green" track={model.tracks[0]} cursor={model.cursor} windowMs={model.windowMs} />
+        <LedTrack name="ERR · 红色" colour="red" track={model.tracks[1]} cursor={model.cursor} windowMs={model.windowMs} />
+        <div className="learn-led-controls"><button disabled={reduced} onClick={() => updateClock({ playing: !playing })}>{playing ? <Pause size={14} /> : <Play size={14} />}{reduced ? '减少动画：手动观察' : playing ? '暂停灯效' : '播放灯效'}</button><label>观察时刻<input type="range" min="0" max={model.windowMs - 1} value={Math.floor(model.cursor)} aria-label="灯效观察时刻" onChange={event => updateClock({ playing: false, time: Number(event.target.value) })} /><output>{Math.floor(model.cursor)} ms</output></label><button aria-label="灯效回到起点" onClick={() => updateClock({ playing: false, time: 0 })}><RotateCcw size={14} /></button></div>
+        <p className="learn-led-clock-status">{reduced ? '减少动画已开启，可拖动时间手动观察。' : playing ? '正在播放，可暂停或拖动时间逐点查看。' : '已暂停；点击“播放灯效”观察闪烁，或拖动时间查看亮灭。'}<span>亮带表示点亮，竖线表示观察时刻；每轮 {model.windowMs} ms。</span></p>
+      </>}
+      <details className="learn-deeper learn-led-scope"><summary>规范、硬件实现与状态迁移</summary><p>指示与标识规范为ETG.1300。本页按公开的Beckhoff灯态表和厂商节奏资料作对照；两条轨道分别演示RUN与ERR，不模拟故障引起的AL状态回退，也不模拟共用双色灯的优先显示。</p><p>真实灯态可能由MCU驱动，或由支持该功能的ESC自动产生，并受0x0139覆盖控制及芯片能力影响。结合AL Status Code与设备手册判断；PDI看门狗和过程数据看门狗不能一律用同一种灯态解释。</p><a href={learningEvidence.led.url} target="_blank" rel="noreferrer">Beckhoff §2.5.5 · ERR灯态与覆盖</a><a href={learningEvidence.ledTiming.url} target="_blank" rel="noreferrer">快闪／慢闪／单闪／双闪节奏</a></details>
+    </div><details className="learn-deeper"><summary>EtherCAT OP与CiA402驱动使能怎样区分？</summary><p>AL状态描述通信；CiA402的PDS状态描述驱动控制。通信在OP时，驱动仍可能处于Switch on disabled或Fault。</p><button className="learn-inline-action" onClick={() => onTiming('drive')}><Play size={14} />对照控制字、状态字和驱动状态</button></details><FigureNote>教学故障由你独立选择，切换AL步骤不会自动改变ERR类型。灯态是查阅入口，具体错误仍需结合AL Status Code与设备手册。</FigureNote>
   </div>
 }
 

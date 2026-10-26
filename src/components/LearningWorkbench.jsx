@@ -49,6 +49,7 @@ function TechnicalDetails({ entry, entries, onNavigate, onFeedback }) {
 
 export default function LearningWorkbench({ entry, entries, route, onContext, onNavigate, onBinding, saved, onSave, onFeedback }) {
   const [timing, setTiming] = useState(null)
+  const [visualReset, setVisualReset] = useState(0)
   const page = useRef(null), stageTitle = useRef(null), focusStep = useRef(true)
   const context = learningContext(route, entry.id)
   const { topic, scene, step } = context
@@ -62,7 +63,7 @@ export default function LearningWorkbench({ entry, entries, route, onContext, on
   function changeValues(patch) { const channel = Number(patch.channel); onContext({ learnData: JSON.stringify({ ...values, ...patch }), ...(topic.id === 'process' && [2, 3].includes(channel) ? { learnDir: channel === 3 ? 'tx' : 'rx', ...(scene.id === 'channels' && step === 1 ? { learnStep: '0' } : {}) } : {}) }, true) }
   function changeStep(next) { focusStep.current = true; const mailboxFocus = topic.id === 'process' && scene.id === 'channels' && next === 1 && Number(values.channel) > 1; onContext({ learnStep: String(next), ...(mailboxFocus ? { learnData: JSON.stringify({ ...values, channel: '0' }) } : topic.id === 'state' && values.bootstrap ? { learnData: JSON.stringify({ ...values, bootstrap: false }) } : {}) }, true) }
   function changeScene(id, initialStep = 0) { focusStep.current = true; onContext({ learnScene: id, learnStep: String(initialStep) }, true) }
-  function restore() { onContext({ learnData: '' }, true) }
+  function restore() { setVisualReset(previous => previous + 1); onContext({ learnData: '' }, true) }
   function next() {
     if (step < scene.steps.length - 1) changeStep(step + 1)
     else onNavigate(learningTopics[topicIndex + 1]?.entryId || 'learn-overview')
@@ -76,7 +77,7 @@ export default function LearningWorkbench({ entry, entries, route, onContext, on
     <div className="learn-stage-intro"><div><h2 tabIndex={-1} ref={stageTitle}>{current.question}</h2><p><ConceptText>{current.explanation}</ConceptText></p></div><button className="learn-reset" onClick={restore} title="恢复本主题教学值"><RotateCcw size={13} /><span>恢复教学值</span></button></div>
     {input.recovered && <p className="learn-link-recovery" role="status">链接中的演示参数无法读取，已使用教学初值。<button onClick={restore}>清理参数</button></p>}
     <TechnicalDetails entry={entry} entries={entries} onNavigate={onNavigate} onFeedback={onFeedback} />
-    <LearningVisuals context={context} entryId={entry.id} values={values} onValues={changeValues} onReset={restore} onStep={changeStep} onScene={changeScene} onDirection={direction => onContext({ learnDir: direction, learnData: JSON.stringify({ ...values, channel: direction === 'tx' ? '3' : '2' }) }, true)} onNavigate={onNavigate} onTiming={(id, initialValues, options = {}) => setTiming({ id, initialValues, ...options })} />
+    <LearningVisuals key={visualReset} context={context} entryId={entry.id} values={values} onValues={changeValues} onReset={restore} onStep={changeStep} onScene={changeScene} onDirection={direction => onContext({ learnDir: direction, learnData: JSON.stringify({ ...values, channel: direction === 'tx' ? '3' : '2' }) }, true)} onNavigate={onNavigate} onTiming={(id, initialValues, options = {}) => setTiming({ id, initialValues, ...options })} />
     <div className="learn-pager"><button disabled={isBoot || step === 0} onClick={() => changeStep(step - 1)}><ArrowLeft size={15} />上一步</button><span>{isBoot ? '升级分支 · 可选择正常状态返回' : `${step + 1} / ${scene.steps.length} · ${scene.label}`}</span><button className="learn-next" onClick={() => isBoot ? changeStep(0) : next()}>{isBoot ? '回到正常状态链' : step < scene.steps.length - 1 ? '下一步' : topicIndex < learningTopics.length - 1 ? '下一个主题' : '回到概念总览'}<ArrowRight size={15} /></button></div>
     <ConfigurationBindings context={bindingContext} onBinding={onBinding} />
     <footer className="learn-topic-footer"><div className="learn-topic-terms"><small>本节概念</small>{topic.terms.map(id => <ConceptButton key={id} id={id} className="concept-chip" />)}</div><details className="learn-references"><summary>依据与适用范围</summary>{topic.evidence.map(id => <a key={id} href={learningEvidence[id].url} target="_blank" rel="noreferrer"><span><strong>{learningEvidence[id].title}</strong><small>{learningEvidence[id].scope}</small></span><ExternalLink size={13} /></a>)}</details></footer>

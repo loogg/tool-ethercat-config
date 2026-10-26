@@ -109,6 +109,30 @@ export function ledIsOn(patternId, time) {
   return pattern.pulses.some(([start, end]) => at >= start && at < end)
 }
 
+/** A shared repeat window keeps the lamp, waveform and cursor in the same phase. */
+export function ledTimeline({ run = 'off', error = 'off', time = 0 } = {}) {
+  if (![run, error].every(id => Object.hasOwn(ledPatterns, id))) throw new Error('未识别的灯态模式。')
+  if (typeof time !== 'number' || !Number.isFinite(time) || time < 0) throw new Error('灯效观察时间须为非负数值。')
+  const patterns = [run, error].map(id => ledPatterns[id])
+  const animated = patterns.filter(pattern => !pattern.steady)
+  const gcd = (a, b) => b ? gcd(b, a % b) : a
+  const cycle = animated.reduce((value, pattern) => value / gcd(value, pattern.period) * pattern.period, 1)
+  const windowMs = animated.length ? Math.ceil(1600 / cycle) * cycle : 1600
+  const cursor = time % windowMs
+  const tracks = [run, error].map((patternId, index) => {
+    const pattern = patterns[index], intervals = []
+    if (pattern.steady) {
+      if (ledIsOn(patternId, 0)) intervals.push([0, windowMs])
+    } else {
+      for (let at = 0; at < windowMs; at += pattern.period) {
+        for (const [start, end] of pattern.pulses) intervals.push([at + start, Math.min(at + end, windowMs)])
+      }
+    }
+    return { id: index === 0 ? 'run' : 'error', patternId, pattern, intervals, on: ledIsOn(patternId, cursor) }
+  })
+  return { windowMs, cursor, tracks }
+}
+
 export function fmmuLesson(input = 0) {
   const offset = parseUnsigned(input, { name: '逻辑位偏移', max: 15 })
   const physical = offset + 3

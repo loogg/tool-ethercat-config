@@ -5,7 +5,8 @@ export const learningEvidence = {
   ssc: { title: 'Beckhoff ET9300 · SSC V1.10', url: 'https://download.beckhoff.com/download/Document/io/ethercat-development-products/an_et9300_v1i10.pdf', scope: 'SSC应用接口、对象布局、同步与生成流程。' },
   alignment: { title: 'ET9300 §7.1 / §7.2 · 对象本地布局', url: 'https://download.beckhoff.com/download/Document/io/ethercat-development-products/an_et9300_v1i10.pdf#page=61', scope: 'SSC默认对象访问层的本地内存假设；自定义访问层需另外核对。' },
   mapping: { title: 'ET9300 §13.3 · PDO Mapping / Assignment', url: 'https://download.beckhoff.com/download/Document/io/ethercat-development-products/an_et9300_v1i10.pdf#page=120', scope: 'CoE映射与SM分配；本页采用典型带邮箱从站的教学布局。' },
-  led: { title: 'Novanta · EtherCAT LED signals reference', url: 'https://drives.novantamotion.com/den-safe-net/led-signals-reference', scope: '常见EtherCAT灯态与节奏示例；设备可能另有专用灯和覆盖行为。' },
+  led: { title: 'Beckhoff · ERR灯态与覆盖寄存器 §2.5.5', url: 'https://download.beckhoff.com/download/Document/io/ethercat-development-products/ethercat_esc_datasheet_sec2_registers_v3.3.pdf#page=37', scope: 'Register Description V3.3：六种ERR灯态及ESC自动指示；PDI看门狗、BIST等支持按型号核对。' },
+  ledTiming: { title: 'Novanta · 灯效节奏对照', url: 'https://drives.novantamotion.com/den-safe-net/led-signals-reference', scope: '快闪、慢闪、单闪及双闪的典型节奏；设备实际灯态还取决于固件和硬件实现。' },
   mdp: { title: 'ET9300 §6.4.1 · Modules and Slots', url: 'https://download.beckhoff.com/download/Document/io/ethercat-development-products/an_et9300_v1i10.pdf#page=48', scope: 'ETG.5001模块化设备定义；单/多实例和模块可选性分别配置。' },
   drive: { title: 'TI · CiA402 drive example', url: 'https://software-dl.ti.com/processor-industrial-sw/esd/ind_comms_sdk/am243x/latest/docs/am243x/ethercat_subdevice/example2.html', scope: '驱动控制与通信状态的分工，具体行为按设备Profile实现。' },
 }
@@ -57,7 +58,7 @@ export const learningTopics = [
       step('SM Sync', 'SM事件怎样与应用处理联系？', '应用按所用SM事件组织执行。事件生成、PDI通知和固件处理共同决定实际时序，不能仅凭一个中断宏判断全部行为。', ['al-event', 'output-copy', 'input-copy']),
       step('DC', '使用DC后，哪些时间仍需分别核对？', 'DC同步事件可触发应用或外设；通信周期、数据就绪、应用处理与物理延迟分别核对。选择事件图可以继续看SYNC与LATCH。', ['dc-support', 'esi-activate', 'min-cycle']),
     ] }] },
-  { id: 'state', entryId: 'learn-state', number: '05', title: '状态与指示灯', question: '灯在闪，意味着通信走到了哪一步？', summary: '结合能力、灯态和错误信息判断状态。', visual: 'state', icon: 'CircleDot', evidence: ['ssc', 'esc', 'led', 'drive'], terms: ['al', 'led', 'watchdog', 'cia402'],
+  { id: 'state', entryId: 'learn-state', number: '05', title: '状态与指示灯', question: '灯在闪，意味着通信走到了哪一步？', summary: '结合能力、灯态和错误信息判断状态。', visual: 'state', icon: 'CircleDot', evidence: ['ssc', 'esc', 'led', 'ledTiming', 'drive'], terms: ['al', 'led', 'watchdog', 'cia402'],
     scenes: [{ id: 'state', label: 'AL状态与指示灯', steps: [
       step('INIT', '设备刚开始，哪些通信还没有准备好？', 'INIT阶段初始化通信资源。此教学设备尚未开放正常邮箱与过程数据通信，RUN灯为灭。', ['esi-sm']),
       step('PREOP', '为什么能读参数，却还没有正常PDO？', '邮箱通信已可用于参数和配置，过程数据配置仍需检查。典型RUN指示为Blinking。', ['object-access', 'esi-coe']),
@@ -75,7 +76,7 @@ export const learningTopics = [
     ] }] },
 ]
 
-const conceptEvidence = { watchdog: ['esc', 'ssc'], led: ['led'], al: ['ssc'], cia402: ['drive', 'ssc'], mdp: ['mdp'], word: ['alignment'] }
+const conceptEvidence = { watchdog: ['esc', 'ssc'], led: ['led', 'ledTiming'], al: ['ssc'], cia402: ['drive', 'ssc'], mdp: ['mdp'], word: ['alignment'] }
 const concept = (id, label, aliases, definition, topic, entryId, scene, stepIndex, prerequisites = [], misconception = '') => ({ id, label, aliases: [label, ...aliases], definition, topic, entryId, scene, step: stepIndex, prerequisites, misconception, evidence: conceptEvidence[id] || learningTopics.find(item => item.id === topic).evidence })
 export const learningConcepts = [
   concept('master', '主站', ['Master', 'MainDevice'], '组织EtherCAT通信、配置从站，并读写过程数据的一端。', 'roles', 'learn-roles', 'roles', 0, [], '输入/输出通常以主站为参照。'),
@@ -189,16 +190,18 @@ export const alStates = [
   { id: 'OP', label: '运行', run: 'on', mailbox: true, inputs: true, outputs: true },
 ]
 export const ledPatterns = {
-  off: { label: '灭', period: 1200, pulses: [], text: '保持熄灭' },
-  on: { label: '常亮', period: 1200, pulses: [[0, 1200]], text: '保持点亮' },
-  blink: { label: 'Blinking · 闪烁', period: 400, pulses: [[0, 200]], text: '约200 ms亮 / 200 ms灭' },
-  single: { label: 'Single flash · 单闪', period: 1200, pulses: [[0, 200]], text: '约200 ms亮 / 1000 ms灭' },
-  double: { label: 'Double flash · 双闪', period: 1600, pulses: [[0, 200], [400, 600]], text: '亮200 / 灭200 / 亮200 / 灭1000 ms' },
-  flicker: { label: 'Flickering · 快闪', period: 100, pulses: [[0, 50]], text: '约50 ms亮 / 50 ms灭' },
+  off: { label: '灭', shortLabel: '灭', steady: true, period: 1200, pulses: [], text: '保持熄灭' },
+  on: { label: '常亮', shortLabel: '常亮', steady: true, period: 1200, pulses: [[0, 1200]], text: '保持点亮' },
+  blink: { label: 'Blinking · 慢闪', shortLabel: '慢闪', period: 400, pulses: [[0, 200]], text: '约200 ms亮 / 200 ms灭' },
+  single: { label: 'Single flash · 单闪', shortLabel: '单闪', period: 1200, pulses: [[0, 200]], text: '约200 ms亮 / 1000 ms灭' },
+  double: { label: 'Double flash · 双闪', shortLabel: '双闪', period: 1600, pulses: [[0, 200], [400, 600]], text: '亮200 / 灭200 / 亮200 / 灭1000 ms' },
+  flicker: { label: 'Flickering · 快闪', shortLabel: '快闪', period: 100, pulses: [[0, 50]], text: '约50 ms亮 / 50 ms灭' },
 }
 export const errorIndicators = [
-  { id: 'none', label: '无错误', pattern: 'off', explanation: '此时没有由ERR灯报告的错误；仍需结合设备状态。' },
+  { id: 'none', label: '无错误', pattern: 'off', explanation: '当前没有选中故障，所以ERR保持熄灭。PREOP、SAFEOP也可以正常且无错误；切换AL步骤不会自动产生故障。' },
+  { id: 'boot-error', label: '启动错误', pattern: 'flicker', explanation: '启动发生错误，例如SII EEPROM加载失败或CRC错误。ERR快闪与正常BOOT升级分支的RUN快闪含义不同。' },
   { id: 'configuration', label: '配置无效', pattern: 'blink', explanation: '检查设备配置、SM与映射等，并读取原始AL Status Code。' },
   { id: 'local', label: '本地错误', pattern: 'single', explanation: '应用可因本地条件改变通信状态；需查固件、同步和AL错误信息。' },
-  { id: 'watchdog', label: '过程数据看门狗超时', pattern: 'double', explanation: '检查有效过程数据触发与看门狗配置；灯态本身不定位唯一根因。' },
+  { id: 'watchdog', label: '过程数据看门狗超时', pattern: 'double', explanation: '过程数据／SM看门狗超时采用双闪对照，检查有效SM触发与超时配置。它与PDI看门狗不同；ESC自动双闪的触发条件及固件状态回退后的保持方式须按实现核对。' },
+  { id: 'controller-error', label: '严重通信／控制器错误', pattern: 'on', explanation: '严重通信或应用控制器错误采用常亮对照。支持相应功能的Beckhoff ESC还可用常亮报告PDI看门狗、BIST或IP核许可错误；这些自动指示能力依型号，并非所有看门狗超时都双闪。' },
 ]
