@@ -43,7 +43,7 @@ ERR场景 -> ERR模式 ----+-> 共用循环窗口 -> 亮带、灯、游标、读
 
 关键证据：[默认无错误解释](state-led-guide/default-panel.jpg)、[启动错误快闪](state-led-guide/boot-error.jpg)、[窄屏控制与规范说明](state-led-guide/mobile-controls.png)。其他过程画面留在temp目录。
 
-当前阶段：v1.5.2 本地实现与界面核验完成，准备按既有授权提交、推送和发布。范围为教学内容和局部灯态交互，不连接设备或写入寄存器。
+当前阶段：v1.5.2 本地实现、实际界面与Pages部署核验完成。范围为教学内容和局部灯态交互，不连接设备或写入寄存器。
 
 ## 交付候选
 
@@ -51,4 +51,7 @@ ERR场景 -> ERR模式 ----+-> 共用循环窗口 -> 亮带、灯、游标、读
 - ZIP：`ethercat-atlas-v1.5.2.zip`，607746 Byte，共32个文件；29个dist文件逐个核对SHA256一致。
 - ZIP SHA256：`86f9924b602d22e0243039e65ee4f47f4c27c9b68826ea70b8f90a2515b14653`。
 - 在交付目录使用包内Node脚本启动，没有node_modules；入口和主脚本HTTP均200。测试服务已关闭，本机审核预览4181仍由工具管理的前台会话提供。
-- 生产依赖审计：0漏洞。提交、线上部署与发布资产回读待完成。
+- 生产依赖审计：0漏洞。
+- 代码提交：`30b9e4bd4c209019457d342e4d3cb9d495a55990`；[GitHub验证与Pages部署](https://github.com/loogg/tool-ethercat-config/actions/runs/40251873705)均成功。
+- 已下载29个线上静态文件，与Pages子路径候选逐个SHA256核对全部一致。线上浏览器确认可见v1.5.2、六种ERR选项及默认“无错误→ERR灭”解释。
+- 线上入口：[状态与指示灯](https://loogg.github.io/tool-ethercat-config/#/entry/learn-state?collection=concepts&pane=detail)。后续验收文档与截图提交不改变已核验的运行代码。
