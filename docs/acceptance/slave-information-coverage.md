@@ -26,7 +26,7 @@ SlaveInformation 13字段
 | 导航与搜索 | 13项按截图顺序；宏名直接搜索命中；旧名称/版本/Identity链接仍可用 | 通过；列表和搜索/路由语义测试，实际导航显示13项 |
 | 模型与内容 | 逐项说明类型、用途、关联及边界；图片无虚构CoE/SII数据；5001/402十进制十六进制区分 | 通过；逐SI地址、图片父级、Profile位段及旧版本长度说明分别检查 |
 | 图片入口 | 三个IMAGE字段均有明显的工具链接，目标正确，新标签打开并保留当前查阅页 | 通过；实际点开新标签，三页头部与检查器链接正确，目标HTTP 200 |
-| 验证与交付 | 内容/图关系回归、lint/build、实际桌面/窄屏、提交推送及线上版本核验 | 本地206项回归、lint/build与桌面/390px通过；待发布核验 |
+| 验证与交付 | 内容/图关系回归、lint/build、实际桌面/窄屏、提交推送及线上版本核验 | 通过；206项回归、lint/build、实际界面、CI部署和线上39文件校验均完成 |
 
 ## 公开依据
 
@@ -50,5 +50,14 @@ SlaveInformation 13字段
 - [13项导航与图标工具](images/slave-information/desktop.png)
 - [Device Type位段说明](images/slave-information/profile.png)
 - [390px图标入口](images/slave-information/mobile.png)
+- [线上v1.7.1](images/slave-information/published.png)
 
-当前阶段：实现与本地验收完成，准备v1.7.1发布。
+## 发布核验
+
+- 功能提交`d647e2e52e2017f8494ca07581111ae9dc0988b3`已推送；[CI 40447194411](https://github.com/loogg/tool-ethercat-config/actions/runs/40447194411)的verify与deploy均成功。
+- [线上入口](https://loogg.github.io/tool-ethercat-config/?v=1.7.1#/entry/vendor-image?collection=SSC&group=SlaveInformation&pane=detail)实际显示v1.7.1、13个原名字段与正确的新标签图标链接；已保存公开页面截图。
+- Pages子路径构建的39个文件逐一下载并比较SHA-256，全部一致。
+- [Release v1.7.1](https://github.com/loogg/tool-ethercat-config/releases/tag/v1.7.1)含ZIP与校验文件。ZIP共43文件（39个dist文件及4个预览/说明文件）、1,105,566Byte，打包逐项比较与ZIP完整性检查通过。
+- ZIP SHA-256为`c84a024479941fba0463c4cf254fef7c2f462caff7b62151e2f641f753d7f534`，GitHub资产摘要一致。
+
+当前阶段：v1.7.1修改、测试、提交推送、Pages部署、Release与验收归档完成。只修改当前工具仓库。
