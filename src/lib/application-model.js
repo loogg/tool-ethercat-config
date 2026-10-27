@@ -1,3 +1,4 @@
+import { si0Protocol } from '../data/sdo-access.js'
 import { applicationWorkbooks } from '../data/application-workbooks.js'
 
 export const applicationColumns = [
@@ -44,7 +45,7 @@ export function buildSheetModel(workbook, sheet) {
 export function generatedSubindex(object) {
   if (!['ARRAY', 'RECORD'].includes(object.code)) return null
   const max = Math.max(0, ...object.members.map(row => integer(row.values.D) || 0))
-  return { number: `${object.row.number}-si0`, kind: 'generated', object, values: { B: null, C: null, D: 0, E: 'UINT8', F: object.index === 0xF030 ? '配置列表长度' : '最高子索引', G: max, L: object.row.values.L, M: null }, origin: 'SSC 生成规则预览' }
+  return { number: `${object.row.number}-si0`, kind: 'generated', object, protocol: si0Protocol, values: { B: null, C: null, D: 0, E: 'UINT8', F: object.index === 0xF030 ? '配置列表长度' : '最高子索引', G: max, L: object.row.values.L, M: null }, origin: 'SSC 生成规则预览' }
 }
 
 export function filterApplicationObjects(model, query) {

@@ -1,3 +1,4 @@
+import { sdoAccessEvidence } from './sdo-access.js'
 import { attr, esiBool, esiNumber, esiPdoDirections } from '../lib/esi-model.js'
 
 const SSC={title:'Beckhoff ET9300 V1.10 · 应用与模块描述',url:'https://download.beckhoff.com/download/Document/io/ethercat-development-products/an_et9300_v1i10.pdf'}
@@ -63,7 +64,7 @@ const attributes={
   SdoInfo:boolean('SDO Info 能力','主站可查询对象字典描述；固件必须实际支持。',{lesson:'sdo'}),
   PdoAssign:boolean('PDO 分配可配置能力','影响分配对象 0x1C12 / 0x1C13；不等于修改映射内容。',{entryId:'esi-pdoassign'}),
   PdoConfig:boolean('PDO 映射可配置能力','影响 0x160x / 0x1A0x 的映射内容修改。',{entryId:'esi-pdoconfig'}),
-  CompleteAccess:boolean('Complete Access 能力','按一个服务访问多个子项；访问权限与布局约束仍需检查。'),
+  CompleteAccess:boolean('Complete Access 能力','声明完整访问能力；实际对象与固件还需支持。CA起点仅0/1，SI0有效位长与传输/本地占位分别核对。',{references:[SSC,...sdoAccessEvidence]}),
   Fixed:boolean('固定 PDO 内容','约束映射内容，独立于 Mandatory 与默认 Sm 分配。',{entryId:'esi-pdo-flags'}),
   Mandatory:boolean('必选 PDO','是否必须纳入配置；不表示所有备选 PDO 都应活动。',{entryId:'esi-pdo-flags'}),
   Sm:unsigned('默认分配的 SM 序号','存在时表示默认归属；最终活动分配由有效配置决定。',255),

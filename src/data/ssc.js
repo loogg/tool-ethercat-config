@@ -1,3 +1,4 @@
+import { sdoAccessEvidence } from './sdo-access.js'
 // Editorial base: the user's EtherCAT notes. Values below are examples, not SSC defaults.
 const et9300Url = 'https://download.beckhoff.com/download/document/io/ethercat-development-products/an_et9300_v1i10.pdf';
 const smUrl = 'https://infosys.beckhoff.com/content/1033/tc3_io_intro/4981170059.html';
@@ -299,9 +300,10 @@ const mailbox = [
     relations: [link('esi-coe', '需一致', 'ESI 声明不能超出固件实际支持。'), link('object-dictionary', '提供访问', 'SDO 按 Index / SubIndex 寻址。'), link('xlsx-access', '受限于', '每个对象的权限独立生效。')],
   }),
   macro({ name: 'COMPLETE_ACCESS_SUPPORTED', title: 'SDO Complete Access', category: 'mailbox', group: 'Mailbox',
+    refs: sdoAccessEvidence, aliases: ['完整访问', 'CA', 'SI0', 'CA起点'],
     summary: '支持一次 SDO 请求访问复合对象的多个子索引。',
-    details: ['用于 ARRAY / RECORD 等批量访问。应用自定义 CoeRead / CoeWrite 也必须正确处理 Complete Access 标志、数据排列与权限。'],
-    rules: ['验证单子索引和 Complete Access 两条路径，尤其是混合类型 RECORD。', '典型误用：把 Complete Access 理解为无视只读、状态限制或可写范围的“完整权限”。'],
+    details: ['用于ARRAY/RECORD等复合对象；CA起点仅允许0或1。包含SI0时其8bit有效值后补1Byte，从SI1开始时省去这2Byte前缀。', 'SI0协议类型仍为UNSIGNED8；SSC默认本地分配为UINT16。单项访问SI0的有效数据为1Byte，不能与整帧长度或本地sizeof混淆。'],
+    rules: ['CA从SI2或以后开始按不支持访问处理中止（SSC路径对应0x06010000）；单项访问这些SI另按对象范围与权限判断。', '验证单子索引和 Complete Access 两条路径，尤其是混合类型 RECORD。', '典型误用：把 Complete Access 理解为无视只读、状态限制或可写范围的“完整权限”。'],
     code: example('#define COMPLETE_ACCESS_SUPPORTED 1\n// 自定义回调需检查 bCompleteAccess'),
     relations: [link('coe-supported', '依赖', '属于 CoE SDO 能力。'), link('esi-coe', '声明', '向主站声明实际支持的 Complete Access 能力。'), link('xlsx-coe-write', '影响', '自定义访问不能只实现单成员写入。')],
   }),

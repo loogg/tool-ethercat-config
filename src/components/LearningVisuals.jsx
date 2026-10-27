@@ -1,3 +1,4 @@
+import { SdoAccessLesson } from './SdoAccessView.jsx'
 import { useEffect, useId, useState } from 'react'
 import { ArrowLeft, ArrowRight, Cable, Check, Cpu, Database, FileCode2, HardDrive, Layers3, Network, Pause, Play, Radio, RotateCcw, Server } from 'lucide-react'
 import { alStates, errorIndicators, learningEvidence, ledPatterns, objectShapes } from '../data/learning.js'
@@ -228,7 +229,7 @@ function StartupVisual({ context, values, onValues, onNavigate, onTiming }) {
 export default function LearningVisuals(props) {
   const topic = props.context.topic.id
   if (topic === 'roles') return <RolesVisual {...props} />
-  if (topic === 'objects') return <ObjectsVisual {...props} />
+  if (topic === 'objects') return props.context.scene.id === 'sdo-access' ? <SdoAccessLesson values={props.values} onValues={props.onValues} /> : <ObjectsVisual {...props} />
   if (topic === 'process') return <ProcessVisual {...props} />
   if (topic === 'sync') return props.context.scene.id === 'modes' ? <SyncModesVisual {...props} /> : <SyncVisual {...props} />
   if (topic === 'state') return props.context.scene.id === 'watchdog' ? <WatchdogVisual {...props} /> : <StateVisual {...props} />

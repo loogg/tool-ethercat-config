@@ -45,7 +45,7 @@ export function bindingsForStep(context) {
 }
 
 const inputDefaults = {
-  roles: {}, objects: { shape: 'RECORD' },
+  roles: {}, objects: { shape: 'RECORD', mode: 'complete', operation: 'read', start: '0', completeSupported: true, permission: 'rw', state: 'PREOP' },
   process: { members: [{ type: 'UINT16', mapped: true }, { type: 'UINT32', mapped: true }], buffers: '3', internalWidth: '8', capacity: '16', logicalBit: '0', channel: '2' },
   sync: { period: '1000', phase: '250', latch: '650', latency: '100' },
   state: { error: 'none', bootstrap: false, watchScenario: 'pdi-stop', watchTime: '180' }, startup: { emulation: false },

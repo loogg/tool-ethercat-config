@@ -1,6 +1,9 @@
+import { sdoAccessEvidence } from './sdo-access.js'
+
 // Domain knowledge, teaching scenes and view choices stay separate from XML values.
 // All examples are generic and local. No project identity or private source links.
 export const learningEvidence = {
+  completeAccess: sdoAccessEvidence[1],
   esc: { title: 'Beckhoff ESC · Technology V2.5', url: 'https://download.beckhoff.com/download/document/io/ethercat-development-products/ethercat_esc_datasheet_sec1_technology_v2.5.pdf', scope: 'ESC功能原理；具体PDI、缓冲与DC能力按型号手册。' },
   ssc: { title: 'Beckhoff ET9300 · SSC V1.10', url: 'https://download.beckhoff.com/download/Document/io/ethercat-development-products/an_et9300_v1i10.pdf', scope: 'SSC应用接口、对象布局、同步与生成流程。' },
   alignment: { title: 'ET9300 §7.1 / §7.2 · 对象本地布局', url: 'https://download.beckhoff.com/download/Document/io/ethercat-development-products/an_et9300_v1i10.pdf#page=61', scope: 'SSC默认对象访问层的本地内存假设；自定义访问层需另外核对。' },
@@ -20,12 +23,12 @@ export const learningTopics = [
       step('PDI', '应用怎样访问ESC的数据？', 'PDI是过程数据接口，连接ESC与本地应用控制器。可能是SPI、并行接口或片内总线，取决于芯片。', ['hw-access']),
       step('应用', '谁把通信数据变成实际动作？', '应用读取接收的数据、执行业务，再准备发送的数据。ESC和应用控制器可以集成在同一芯片中。', ['output-copy', 'input-copy']),
     ] }] },
-  { id: 'objects', entryId: 'learn-objects', number: '02', title: '对象与地址', question: '0x7000:01 是哪一种地址？', summary: '区分对象成员、ESC寄存器与本地变量。', visual: 'objects', icon: 'Boxes', evidence: ['ssc', 'alignment'], terms: ['dictionary', 'index', 'subindex', 'word'],
+  { id: 'objects', entryId: 'learn-objects', number: '02', title: '对象与地址', question: '0x7000:01 是哪一种地址？', summary: '区分对象成员、ESC寄存器与本地变量。', visual: 'objects', icon: 'Boxes', evidence: ['ssc', 'alignment', 'completeAccess'], terms: ['dictionary', 'index', 'subindex', 'word', 'complete-access'],
     scenes: [{ id: 'objects', label: '对象的三种观察角度', steps: [
       step('地址', '相似的十六进制，表示同一种位置吗？', '对象地址定位网络可访问的数据；ESC寄存器地址定位控制器资源；应用变量在本地内存中。三种地址空间各有含义。', ['object-index', 'object-si', 'esi-sm']),
       step('结构', '一个对象是单值，还是包含多个成员？', 'VARIABLE通过SI0访问单值；ARRAY组织同类型成员；RECORD允许分别定义成员。复合对象的SI0通常描述最高子索引。', ['object-code', 'object-type']),
       step('布局', '为什么协议位长与C结构体大小可能不同？', 'SSC默认本地访问层有字节/WORD布局要求；PDO则按活动映射连续累计位长。本地padding是否进入PDO，取决于映射。', ['object-type', 'padding', 'memory-unit']),
-    ] }] },
+    ] }, { id: 'sdo-access', label: 'SI0与完整访问', steps: [step('三层对照', '同一个SI0，为什么会有8bit、16bit和不同传输长度？', '条目逻辑类型、本地占位和SDO载荷分别计算。完整访问只允许从SI0或SI1开始；单项访问SI2是另一条路径。', ['complete-access', 'object-type', 'object-access'])] }] },
   { id: 'process', entryId: 'learn-process', number: '03', title: 'SM 与 PDO', question: '一个应用成员，怎样进入过程数据？', summary: '沿方向、分配、映射与容量逐步查阅。', visual: 'process', icon: 'GitBranch', evidence: ['mapping', 'esc', 'ssc'], terms: ['pdo', 'rxpdo', 'txpdo', 'assignment', 'mapping', 'sm', 'fmmu', 'sdo'],
     scenes: [
       { id: 'pdo', label: 'PDO 引用链', steps: [
@@ -76,9 +79,10 @@ export const learningTopics = [
     ] }] },
 ]
 
-const conceptEvidence = { watchdog: ['esc', 'ssc'], led: ['led', 'ledTiming'], al: ['ssc'], cia402: ['drive', 'ssc'], mdp: ['mdp'], word: ['alignment'] }
+const conceptEvidence = { 'complete-access': ['ssc', 'completeAccess'], watchdog: ['esc', 'ssc'], led: ['led', 'ledTiming'], al: ['ssc'], cia402: ['drive', 'ssc'], mdp: ['mdp'], word: ['alignment'] }
 const concept = (id, label, aliases, definition, topic, entryId, scene, stepIndex, prerequisites = [], misconception = '') => ({ id, label, aliases: [label, ...aliases], definition, topic, entryId, scene, step: stepIndex, prerequisites, misconception, evidence: conceptEvidence[id] || learningTopics.find(item => item.id === topic).evidence })
 export const learningConcepts = [
+  concept('complete-access', 'Complete Access', ['完整访问', 'CA访问', 'CA起点', 'SI0', '子索引0'], '一次SDO服务组合访问复合对象的多个子项，起点只允许0或1。', 'objects', 'learn-objects', 'sdo-access', 0, ['subindex'], '包含SI0时使用1Byte有效值和1Byte填充；不含SI0时从SI1直接开始。协议位长、本地分配和载荷占用分别解释。'),
   concept('master', '主站', ['Master', 'MainDevice'], '组织EtherCAT通信、配置从站，并读写过程数据的一端。', 'roles', 'learn-roles', 'roles', 0, [], '输入/输出通常以主站为参照。'),
   concept('slave', '从站', ['Slave', 'SubDevice'], '在EtherCAT网络中提供输入、输出或其他设备功能的一端。', 'roles', 'learn-roles', 'roles', 0, ['master']),
   concept('esc', 'ESC', ['EtherCAT Slave Controller'], '负责从站EtherCAT通信侧处理的控制器功能。', 'roles', 'learn-roles', 'roles', 1, ['slave'], 'ESC与应用控制器可以集成，图中的逻辑角色不一定是独立芯片。'),
@@ -113,6 +117,7 @@ export const learningConcepts = [
 const device = '/EtherCATInfo[1]/Descriptions[1]/Devices[1]/Device[1]'
 const binding = (id, surface, title, path, entryId, role, route = {}, condition = '') => ({ id, surface, title, path, entryId, role, route, condition })
 export const learningBindings = [
+  binding('complete-access', 'SSC', 'COMPLETE_ACCESS_SUPPORTED', 'Mailbox / 完整访问能力', 'complete-access-supported', '访问前提与SI0载荷规则'),
   binding('hw-access', 'SSC', 'HW_ACCESS_FILE', 'Hardware / 硬件访问适配', 'hw-access-file', '适配PDI访问'),
   binding('output-copy', 'SSC', 'PD_OUTPUT_CALC_AND_COPY_TIME', 'Synchronisation / 输出处理耗时', 'pd-output-calc-and-copy-time', '描述输出映射耗时'),
   binding('input-copy', 'SSC', 'PD_INPUT_CALC_AND_COPY_TIME', 'Synchronisation / 输入处理耗时', 'pd-input-calc-and-copy-time', '描述输入映射耗时'),
