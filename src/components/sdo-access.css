@@ -14,3 +14,11 @@
 
 .sdo-lesson .sdo-workbench-heading{display:none}
 @container(max-width:900px){.sdo-projections{grid-template-columns:1fr}.sdo-definition-panel{grid-row:auto}}
+
+/* A byte has a stable width across requests, not a fraction of the current length. */
+.sdo-payload-panel{container-type:inline-size}
+.sdo-payload-grid{--sdo-byte-width:36px;max-width:100%;overflow-x:auto;padding:3px}
+@supports(width:1cqw){.sdo-payload-grid{--sdo-byte-width:clamp(30px,calc((100cqw - 27px)/8),52px)}}
+.sdo-byte-scale{font-size:9px;color:#6c809c;margin:0 0 5px}
+.sdo-member-interaction{font-size:11px;color:#4d6f9b;margin:0 0 9px}
+.sdo-definition-table tbody tr{cursor:pointer}

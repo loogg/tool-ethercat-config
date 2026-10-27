@@ -1,9 +1,34 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { sdoTeachingObject, sdoRequestDefaults } from '../src/data/sdo-access.js'
-import { deriveSdoAccess, sscStorageLayout } from '../src/lib/sdo-access-model.js'
+import { deriveSdoAccess, sscStorageLayout, requestForSdoMember, requestForSdoMode } from '../src/lib/sdo-access-model.js'
 import { learningContext, learningInputs, learningSearchContext } from '../src/lib/learning-model.js'
 const plan = (patch = {}, code = 'RECORD') => deriveSdoAccess(sdoTeachingObject(code), { ...sdoRequestDefaults, ...patch })
+
+test('selecting single members updates the requested SI and its actual 1/2/4 byte payload', () => {
+  let request = { ...sdoRequestDefaults, mode: 'single' }
+  for (const [si, bytes] of [[0, [2]], [1, [0x34, 0x12]], [2, [0x12, 0x34, 0x56, 0x78]]]) {
+    request = requestForSdoMember(request, si)
+    assert.equal(request.start, String(si))
+    assert.deepEqual(deriveSdoAccess(sdoTeachingObject(), request).bytes, bytes)
+  }
+})
+test('CA member focus preserves CA0/CA1 range instead of issuing an illegal CA2 request', () => {
+  for (const [start, length] of [['0', 8], ['1', 6]]) {
+    const request = { ...sdoRequestDefaults, start }
+    for (const si of [0, 1, 2]) {
+      const next = requestForSdoMember(request, si)
+      assert.equal(next.start, start)
+      assert.equal(deriveSdoAccess(sdoTeachingObject(), next).byteLength, length)
+    }
+  }
+})
+test('switching to single accesses the focused member while switching to CA does not hide an invalid start', () => {
+  const single = requestForSdoMode(sdoRequestDefaults, 'single', 2)
+  assert.equal(single.start, '2'); assert.equal(deriveSdoAccess(sdoTeachingObject(), single).byteLength, 4)
+  const ca = requestForSdoMode(single, 'complete', 2)
+  assert.equal(ca.start, '2'); assert.equal(deriveSdoAccess(sdoTeachingObject(), ca).abortCode, '0x06010000')
+})
 
 test('SI0 has an eight-bit logical type, a separate sixteen-bit SSC allocation and request-dependent transfer size', () => {
   const object = sdoTeachingObject('RECORD'), before = structuredClone(object)

@@ -5,6 +5,14 @@ export const subIndexText = value => `:${Number(value).toString(16).toUpperCase(
 export const byteText = value => value.toString(16).toUpperCase().padStart(2, '0')
 export const valueText = entry => `0x${entry.value.toString(16).toUpperCase().padStart(entry.logicalBits / 4, '0')}`
 
+// Focusing a member changes a single-entry request; CA focus never changes its range.
+export function requestForSdoMember(request, subIndex) {
+  return request.mode === 'single' && Number.isInteger(subIndex) && subIndex >= 0 && subIndex <= 255 ? { ...request, start: String(subIndex) } : request
+}
+export function requestForSdoMode(request, mode, focusedSubIndex) {
+  return { ...request, mode, start: mode === 'single' && Number.isInteger(focusedSubIndex) ? String(focusedSubIndex) : request.start }
+}
+
 function littleEndian(value, byteLength) {
   return Array.from({ length: byteLength }, (_, offset) => Math.floor(value / 2 ** (offset * 8)) & 255)
 }
