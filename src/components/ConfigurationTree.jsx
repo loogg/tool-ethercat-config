@@ -2,7 +2,7 @@ import { learningTopics } from '../data/learning.js'
 import { useState } from 'react'
 import { ChevronRight, Cpu, FileCode2, FileSpreadsheet, BookOpen, House } from 'lucide-react'
 import { collections } from '../data/navigation.js'
-import { isEntryInScope } from '../lib/library.js'
+import { isEntryInScope, isListedConfiguration } from '../lib/library.js'
 import { ApplicationNavigation } from './ApplicationDefinition.jsx'
 import { EsiNavigation } from './EsiNavigation.jsx'
 
@@ -11,9 +11,9 @@ const icons = { SSC: Cpu, APP: FileSpreadsheet, ESI: FileCode2 }
 function TreeGroups({ groups, entries, collection, activeId, activeGroup, onNavigate, depth = 0 }) {
   const [expanded, setExpanded] = useState(() => Object.fromEntries(groups.map(group => [group.id, activeGroup === group.id || activeGroup.startsWith(`${group.id}/`)])))
   return <div className={`configuration-groups ${depth ? 'nested-groups' : ''}`}>{groups.map(group => {
-    const children = entries.filter(entry => !entry.overview && isEntryInScope(entry, { collection, group: group.id }) && !group.children?.length)
+    const children = entries.filter(entry => isListedConfiguration(entry) && isEntryInScope(entry, { collection, group: group.id }) && !group.children?.length)
     const overview = entries.find(entry => entry.overview && entry.collection === collection && entry.group === group.id)
-    const count = entries.filter(entry => !entry.overview && isEntryInScope(entry, { collection, group: group.id })).length
+    const count = entries.filter(entry => isListedConfiguration(entry) && isEntryInScope(entry, { collection, group: group.id })).length
     const open = expanded[group.id]
     return <section key={group.id} className={`configuration-group ${open ? 'expanded-group' : ''}`}><button className="configuration-group-toggle" aria-expanded={Boolean(open)} onClick={() => setExpanded(prev => ({ ...prev, [group.id]: !prev[group.id] }))}><ChevronRight size={12} className={open ? 'rotated' : ''} /><span>{group.label}</span><small>{count || '说明'}</small></button>{open && <div className="configuration-group-content">{group.children ? <TreeGroups groups={group.children} entries={entries} collection={collection} activeId={activeId} activeGroup={activeGroup} onNavigate={onNavigate} depth={depth + 1} /> : children.length ? children.map(entry => <button className={`configuration-leaf ${entry.id === activeId ? 'selected' : ''}`} aria-current={entry.id === activeId ? 'page' : undefined} key={entry.id} onClick={() => onNavigate(entry.id)}><strong title={entry.name}>{entry.name}</strong><span>{entry.title.replace(`${entry.name}：`, '')}</span></button>) : overview && <button className={`configuration-leaf ${overview.id === activeId ? 'selected' : ''}`} onClick={() => onNavigate(overview.id)}><span>编译适配说明</span></button>}</div>}</section>
   })}</div>

@@ -1,3 +1,4 @@
+import { slaveInformationEntries } from './slave-information.js'
 import { sdoAccessEvidence } from './sdo-access.js'
 // Editorial base: the user's EtherCAT notes. Values below are examples, not SSC defaults.
 const et9300Url = 'https://download.beckhoff.com/download/document/io/ethercat-development-products/an_et9300_v1i10.pdf';
@@ -405,22 +406,10 @@ const mailbox = [
 ];
 
 const identity = [
-  ...[
-    { id: 'coe-device-name', name: '0x1008:00', title: '设备名称', text: '用于 CoE 查询的产品名称。', value: 'Robot End-Joint I/O', rule: '名称与用户看到的型号保持可辨识的一致性；改名称不会自动改变 ESI 的型号匹配字段。' },
-    { id: 'coe-hardware-version', name: '0x1009:00', title: '硬件版本', text: '用于 CoE 查询的实际硬件版本字符串。', value: 'HW1.0', rule: '跟随硬件版本管理；不要用当前固件版本覆盖硬件版本。' },
-    { id: 'coe-software-version', name: '0x100A:00', title: '软件版本', text: '用于 CoE 查询的实际从站固件版本字符串。', value: '1.0.0', rule: '固件发布时与真实构建版本同步；它不等同于 0x1018:03 的产品接口 Revision。' },
-  ].map(({ id, name, title, text, value, rule }) => ({
-    id, name, title, category: 'identity', summary: text,
-    sources: [{ kind: 'SSC', path: `SSC Tool → SlaveInformation → ${title}` }, { kind: 'CoE', path: name }],
-    facts: [{ label: '类型', value: 'VISIBLE_STRING · 实际长度由产品定义' }, { label: '取值', value: '使用当前产品真实信息' }],
-    details: [text, rule], rules: ['典型误用：复制示例工程的字符串作为正式产品身份信息。'],
-    example: example(`${name} = "${value}"`, '字符串示例，不是默认值或已分配的产品身份。', 'text'),
-    relations: [link('coe-identity', '关联', '产品识别还包含 Vendor ID、Product code、Revision 和 Serial number。'), link('object-dictionary', '属于', '通过 CoE 对象地址查询。')],
-    references: sourceRefs(), aliases: [title],
-  })),
-  { id: 'coe-identity', name: '0x1018 Identity', title: '厂商与产品身份', category: 'identity',
-    summary: '用 Vendor ID、Product code、Revision number 和 Serial number 描述设备身份。',
-    sources: [{ kind: 'SSC', path: 'SSC Tool → SlaveInformation → Identity' }, { kind: 'CoE', path: '0x1018:01 … 0x1018:04' }],
+  ...slaveInformationEntries,
+  { id: 'coe-identity', navigationHidden: true, name: '0x1018 Identity', title: '厂商与产品身份', category: 'identity',
+    summary: '四个身份配置与CoE Identity的对照参考；Identity不是SSC Tool中一个独立可填写的参数。',
+    sources: [{ kind: 'SSC', path: 'SSC Tool → SlaveInformation → VENDOR_ID / PRODUCT_CODE / REVISION_NUMBER / SERIAL_NUMBER' }, { kind: 'CoE', path: '0x1018:01 … 0x1018:04' }],
     facts: [{ label: ':01', value: 'Vendor ID · UINT32' }, { label: ':02', value: 'Product code · UINT32' }, { label: ':03', value: 'Revision number · UINT32' }, { label: ':04', value: 'Serial number · UINT32' }],
     details: ['Vendor ID 使用本厂商合法分配的 EtherCAT Vendor ID；产品码、接口版本及序列号遵循产品管理方案。', '核对 CoE、ESI 与 SII 中相应身份字段。名称字符串与软件版本不替代这些匹配信息。'],
     rules: ['修改接口兼容性时按产品规则处理 Revision，并验证主站实际选中的 ESI。', '典型误用：沿用评估板厂商身份，或把固件语义版本字符串直接当成 Revision number 的固定编码规则。'],

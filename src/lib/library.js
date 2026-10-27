@@ -31,6 +31,9 @@ export function isEntryInScope(entry, { collection = 'all', group = '' } = {}) {
     (!group || entry.group === group || entry.group?.startsWith(`${group}/`))
 }
 
+// Auxiliary references keep their links/search identity without pretending to be settings.
+export const isListedConfiguration = entry => !entry.overview && !entry.navigationHidden
+
 export function searchEntries(index, { query = '', category = 'all', source = 'all', collection = 'all', group = '', ids = null } = {}) {
   const terms = query.trim().split(/\s+/).filter(Boolean).map(normalize)
   const full = normalize(query)

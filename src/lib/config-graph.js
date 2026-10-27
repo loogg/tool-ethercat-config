@@ -252,7 +252,7 @@ function addressRangeGraph(entry, entries) {
   return { rootId: root.id, nodes: [root, other, window, actual], edges: [edge('range-root', root.id, window.id, 'constrains', entry.id === min.id ? '起点下限' : '起点上限', '这是起始地址边界，不是完整缓冲的结束地址。'), edge('range-other', other.id, window.id, 'constrains', entry.id === min.id ? '起点上限' : '起点下限', '起始地址必须同时满足上下限。'), edge('range-default', window.id, actual.id, 'constrains', '默认地址也须满足', '默认值与主站实际地址分别核对；可用区间还受Length和内部字宽影响。')], sample: null, calculator: 'memory', contextNote: '物理结束地址不能只看StartAddress上限；需带入Length、缓冲数与内部字宽。', extraCount: 0 }
 }
 
-const objectNames = { '0x1008:00': 'Device name', '0x1009:00': 'Hardware version', '0x100A:00': 'Software version', '0x1018:01': 'Vendor ID', '0x1018:02': 'Product code', '0x1018:03': 'Revision number', '0x1018:04': 'Serial number' }
+const objectNames = { '0x1000:00': 'Device type', '0x1008:00': 'Device name', '0x1009:00': 'Hardware version', '0x100A:00': 'Software version', '0x1018:01': 'Vendor ID', '0x1018:02': 'Product code', '0x1018:03': 'Revision number', '0x1018:04': 'Serial number' }
 const identityObjects = { 'coe-device-name': ['0x1008:00'], 'coe-hardware-version': ['0x1009:00'], 'coe-software-version': ['0x100A:00'], 'coe-identity': ['0x1018:01', '0x1018:02', '0x1018:03', '0x1018:04'] }
 
 function knownObjectLinks(entry) {
@@ -297,7 +297,24 @@ function completeAccessGraph(entry, entries) {
   return {rootId:entry.id,nodes:[root,coe,xml,shape,protocol,local,wire],edges,sample:null,contextNote:'此图表达访问规则；打开“SDO能力与访问规则”可看分支，应用/ESI入口使用当前对象定义。',extraCount:0}
 }
 
+function imageGraph(entry) {
+  const root=entryNode(entry),placement=entry.imagePlacement
+  const format=extraNode('image-format','rule','完整BMP → HEX','输入格式 · 生成元数据','SSC字段填写完整BMP二进制的十六进制数据；不是文件路径、C数组或整个XML标签。',[{label:'常见目标',value:'16 × 14 pixel'},{label:'链接工具输出',value:'4bit未压缩BMP HEX'}],{rules:['实际支持的BMP格式按当前SSC版本核对。','HEX中的省略号不能作为正式数据输入。'],references:entry.references})
+  const target=extraNode('image-target','artifact',placement.element,placement.parent,`图标生成到${placement.parent}；不自动建立CoE对象或修改SII身份区。`,[{label:'父级',value:placement.parent},{label:'作用',value:'ESI目录图标显示'}],{position:{surface:'ESI',parent:placement.parent,selector:placement.element},references:entry.references})
+  return {rootId:root.id,nodes:[root,format,target],edges:[edge('image-format-rule',format.id,root.id,'constrains','输入格式','完整BMP数据的HEX与ESI XML片段分开使用。','按当前SSC接受的位图格式核对',entry.references),edge('image-description',root.id,target.id,'describes','ESI图标位置','同一生成工程中核对相应父级的图标数据；不同文件不自动合并。','生成元数据，不是过程数据',entry.references)],sample:null,extraCount:0,contextNote:'图标只用于描述显示。使用右上角“图标转换工具”生成HEX，再到实际SSC工程核对。'}
+}
+
+function deviceTypeGraph(entry,entries) {
+  const root=entryNode(entry),refs=entry.references,byId=new Map(entries.map(item=>[item.id,item]))
+  const object=extraNode('device-type-object','object','0x1000:00 · Device Type','CoE对象字典','完整32bit设备类型；低16bit为Profile号，高16bit附加含义由对应Profile决定。',[{label:'低16bit',value:'Profile号 · 0…65535'},{label:'高16bit',value:'Profile相关附加信息'}],{references:refs,rules:entry.rules})
+  const profiles=extraNode('profile-number-examples','rule','5001 / 402','数值写法示意 · 不是当前工程值','同一数值的十进制与十六进制写法对应；切换Profile还需要相应对象和应用实现。',entry.deviceType.examples.map(example=>({label:`${example.profile}（十进制）`,value:example.hex})),{references:refs,rules:['0x5001不等于十进制5001。','高16bit不能统一解释成轴数、模块数或硬件/软件版本。']})
+  const xml={...entryNode(byId.get('esi-device')),name:'Profile / ProfileNo',position:{surface:'ESI',parent:'Device › Profile',selector:'ProfileNo'},fields:[{label:'核对内容',value:'Profile号与实际应用一致'},{label:'实际值',value:'进入当前XML查阅'}]}
+  return {rootId:root.id,nodes:[root,object,profiles,xml],edges:[edge('device-type-value',root.id,object.id,'describes','Device Type对应','生成/初始化0x1000的值，实际固件和对象定义须核对。','未载入当前工程值',refs),edge('profile-number-rule',object.id,profiles.id,'describes','低16bit释义','保留完整32bit Device Type，Profile号仅是其低16bit。','示例，不自动选择设备Profile',refs),edge('profile-xml',profiles.id,xml.id,'describes','Profile号核对','应用定义、ESI ProfileNo与实际固件Profile按同一产品方案核对。','只改数字不实现Profile行为',refs)],sample:null,extraCount:0,contextNote:'0x1000的32bit Device Type与ESI ProfileNo分层；5001与402只是数值/模型对照示意。'}
+}
+
 function createConfigGraph(entry, entries, { expanded = false, cycleValue = '100000', bitLengths = '16, 32', capacity = '16', memory = {} } = {}) {
+  if(entry.imagePlacement)return imageGraph(entry)
+  if(entry.deviceType)return deviceTypeGraph(entry,entries)
   if(entry.id==='complete-access-supported')return completeAccessGraph(entry,entries)
   if (['min-pd-cycle-time', 'pd-output-calc-and-copy-time', 'pd-input-calc-and-copy-time', 'pd-output-delay-time', 'pd-input-delay-time'].includes(entry.id)) return cycleGraph(entry, cycleValue, entries, expanded)
   if (['max-pd-output-size', 'max-pd-input-size'].includes(entry.id)) return capacityGraph(entry, bitLengths, capacity, expanded, memory)

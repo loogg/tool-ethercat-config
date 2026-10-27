@@ -253,3 +253,5 @@
   .calculator-dialog-content { padding: 18px 16px 28px; }
 }
 @media (prefers-reduced-motion: reduce) { .field-node { transition: none; } }
+
+.config-external-tool{display:inline-flex;align-items:center;gap:6px;min-height:31px;padding:6px 10px;border:1px solid #bcd2ed;border-radius:4px;background:#f4f8ff;color:#315fa2;font-size:11px;text-decoration:none;white-space:nowrap}.config-external-tool:hover{background:#eaf2ff;border-color:#7ea5d6}.config-external-tool:focus-visible{outline:2px solid #427ac5;outline-offset:3px}.inspector-tools{margin:15px 0;padding:12px 0;border-top:1px solid #e1e8f0}.inspector-tools h3{font-size:11px;font-weight:500;margin:0 0 8px;color:#45658b}.inspector-tools p{font-size:10px;line-height:1.8;color:#6a7f9b;margin:8px 0 0}

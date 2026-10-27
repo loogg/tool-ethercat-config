@@ -1,6 +1,6 @@
 # 配置模型逐项判断清单
 
-日期：2026-10-24。共103个正式配置，依据已有项目技术资料与用户最新评审明确分类。模型定义在src/data/config-models.js；新增正式配置无分类时测试失败。
+日期：2026-10-27。共113个已审查配置/兼容参考（Identity对照不作为目录配置项显示），依据已有项目技术资料与用户最新评审明确分类。模型定义在src/data/config-models.js；新增正式配置无分类时测试失败。
 
 分类决定应采用字段映射、分支、位域、权限、时序、地址或容量/缓冲结构。工程连线的具体条件与来源仍单独保存；旧资料中的不确定关联保留为参考虚线，不自动解释成同值或公式。
 
@@ -8,10 +8,12 @@ v1.2：APP 字段在[工作表与领域关联模型](application-definition-mode
 
 | 配置 | 所属位置 | 模型 | 判断依据 |
 |---|---|---|---|
-| Device name | SSC / SlaveInformation | 身份字段映射 | 配置字段连接到 CoE / ESI / SII 身份，不把对象索引作为配置名。 |
-| Hardware version | SSC / SlaveInformation | 身份字段映射 | 配置字段连接到 CoE / ESI / SII 身份，不把对象索引作为配置名。 |
-| Software version | SSC / SlaveInformation | 身份字段映射 | 配置字段连接到 CoE / ESI / SII 身份，不把对象索引作为配置名。 |
-| Vendor / Product / Revision / Serial | SSC / SlaveInformation | 身份字段映射 | 配置字段连接到 CoE / ESI / SII 身份，不把对象索引作为配置名。 |
+| VENDOR_ID / PRODUCT_CODE / REVISION_NUMBER / SERIAL_NUMBER | SSC / SlaveInformation | 身份字段映射 | 逐项对应0x1018:01/02/03/04，核对适用的ESI与SII；不复用示例厂商值。 |
+| VENDOR_NAME / GROUP_NAME | SSC / SlaveInformation | 目录显示元数据 | 厂商显示名称与分组标识/引用单独处理，不虚构CoE对象。 |
+| VENDOR_IMAGE / GROUP_IMAGE / DEVICE_IMAGE | SSC / SlaveInformation | 图标数据与生成目标 | 各自的ESI父级、完整BMP HEX与外部转换工具，区别于CoE或SII身份数据。 |
+| DEVICE_PROFILE_TYPE | SSC / SlaveInformation | Device Type与Profile位段 | 0x1000全32bit、低16bit Profile号与高16bit附加信息分别核对；5001=0x1389、402=0x0192。 |
+| DEVICE_NAME / DEVICE_HW_VERSION / DEVICE_SW_VERSION | SSC / SlaveInformation | 名称与版本字段映射 | 保留原深链接；对应0x1008/9/A，说明版本相关*_LEN，不混用固件版本与数字Revision。 |
+| Identity字段对照 | SSC / SlaveInformation · 兼容参考 | 身份字段映射 | 通过关联/旧链接查阅四字段对照，不显示为独立可填写参数。 |
 | SYSTEM_HEADER_FILE | SSC / Generic | 头文件引用 | 表达公共声明或硬件适配头文件的代码引用；不假设有同值 ESI 字段。 |
 | EXPLICIT_DEVICE_ID | SSC / Generic | 功能前提与能力 | 展示开启条件、相关声明与应用接入；开关不表示业务已经实现。 |
 | ESC_SM_WD_SUPPORTED | SSC / Generic | 看门狗路径与计时 | 选择硬件状态/本地计时路径；独立展示 Divider、Count、触发条件及公式。 |

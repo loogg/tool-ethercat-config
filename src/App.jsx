@@ -2,7 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { ArrowLeft, Bookmark, BookOpen, Calculator, Check, ChevronRight, CircleHelp, Clock3, Command, FileCode2, Menu, Search, X } from 'lucide-react'
 import { entries, entryMap } from './data/index.js'
 import { collections } from './data/navigation.js'
-import { createSearchIndex, searchEntries, parseRoute, resolveRoute, routeHash, getEntryScope, getCollectionGroups, initialRecentList, readStoredList, writeStoredList, isEntryInScope } from './lib/library.js'
+import { createSearchIndex, searchEntries, parseRoute, resolveRoute, routeHash, getEntryScope, getCollectionGroups, initialRecentList, readStoredList, writeStoredList, isEntryInScope, isListedConfiguration } from './lib/library.js'
 import ConfigGraph from './components/ConfigGraph.jsx'
 import ConfigurationTree from './components/ConfigurationTree.jsx'
 import ApplicationDefinition from './components/ApplicationDefinition.jsx'
@@ -28,7 +28,7 @@ function currentRoute() {
 }
 
 function CollectionHome({ collection, onNavigate, onGroup }) {
-  const fields = entries.filter(entry => !entry.overview && entry.collection === collection.id)
+  const fields = entries.filter(entry => isListedConfiguration(entry) && entry.collection === collection.id)
   return <section className="collection-home"><header><span>{collection.id === 'APP' ? 'Excel 应用定义' : collection.id === 'ESI' ? 'XML 设备描述' : 'Slave Project Navigation'}</span><h1>{collection.label}</h1><p>选择一个配置，查看它的位置、关联与计算。</p></header><div className="collection-index">{getCollectionGroups(collection.id).filter(group => !group.children?.length).map(group => <section key={group.id}><h2><button onClick={() => onGroup(collection.id, group.id)}>{group.id === 'Application/ProcessData' ? 'Application / ProcessData' : group.label}<ChevronRight size={14} /></button></h2><div>{fields.filter(entry => isEntryInScope(entry, { collection: collection.id, group: group.id })).map(entry => <button key={entry.id} onClick={() => onNavigate(entry.id)}><strong>{entry.name}</strong><span>{entry.title.replace(`${entry.name}：`, '')}</span><ChevronRight size={13} /></button>)}{!fields.some(entry => entry.group === group.id) && <button onClick={() => onNavigate('ssc-compiler-overview')}>编译适配说明<ChevronRight size={13} /></button>}</div></section>)}</div></section>
 }
 
@@ -70,7 +70,7 @@ export default function App() {
   function navigateView(view, calculatorId = 'mapping') { setSearchOpen(false); setFocusQuery(''); setSearchBackground(view === 'home' ? 'home' : 'entry'); updateRoute({ view, id: view === 'calculators' ? calculatorId : '', collection: 'all', group: '', query: '' }) }
   function selectCollection(id, group = '') {
     const collection = collections.find(c => c.id === id)
-    const first = group ? entries.find(entry => !entry.overview && isEntryInScope(entry, { collection: id, group })) : entryMap.get(collection.overview)
+    const first = group ? entries.find(entry => isListedConfiguration(entry) && isEntryInScope(entry, { collection: id, group })) : entryMap.get(collection.overview)
     navigate(first?.id || 'ssc-compiler-overview')
   }
   function changeQuery(value) { if (route.view !== 'search') setSearchBackground(route.view === 'home' ? 'home' : 'entry'); setSearchOpen(true); updateRoute({ ...route, view: 'search', id: '', collection: 'all', group: '', query: value }, route.view === 'search') }

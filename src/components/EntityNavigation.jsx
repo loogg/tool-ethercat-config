@@ -1,7 +1,7 @@
 import { useId, useState } from 'react'
 import { BookOpen, ChevronRight, Cpu, FileCode2, FileSpreadsheet, Search } from 'lucide-react'
 import { collections } from '../data/navigation.js'
-import { isEntryInScope } from '../lib/library.js'
+import { isEntryInScope, isListedConfiguration } from '../lib/library.js'
 import './entity-navigation.css'
 
 const ICONS = { SSC: Cpu, APP: FileSpreadsheet, ESI: FileCode2, concepts: BookOpen }
@@ -10,7 +10,7 @@ function Groups({ groups, collection, entries, activeGroup, onSelect, expanded, 
   return <ul className={`entity-groups${depth ? ' entity-subgroups' : ''}`}>
     {groups.map(group => {
       const matches = entries.filter(entry => isEntryInScope(entry, { collection, group: group.id }))
-      const count = matches.filter(entry => !entry.overview).length
+      const count = matches.filter(isListedConfiguration).length
       const hasChildren = Boolean(group.children?.length)
       const open = expanded[group.id] !== false
       const regionId = `${prefix}-${group.id.replace(/[^a-z0-9]/gi, '-')}`
@@ -36,7 +36,7 @@ export default function EntityNavigation({ entries, activeCollection, activeGrou
       {collections.filter(collection => collection.id !== 'concepts').map(collection => {
         const Icon = ICONS[collection.id]
         const selected = activeCollection === collection.id
-        const count = entries.filter(entry => entry.collection === collection.id && !entry.overview).length
+        const count = entries.filter(entry => entry.collection === collection.id && isListedConfiguration(entry)).length
         const regionId = `${id}-${collection.id}`
         return <div className={`entity-collection${selected ? ' active-collection' : ''}`} key={collection.id}>
           <div className={`entity-collection-row${selected && !activeGroup ? ' selected' : ''}`}>

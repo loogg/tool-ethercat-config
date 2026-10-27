@@ -2,6 +2,14 @@
 
 面向 EtherCAT 从站开发的纯前端配置查阅工作台。SSC Tool、应用定义文件（Excel）、ESI 设备描述文件和 CoE/ESC 概念统一检索，带双向配置关系、可追溯资料和五类交互计算。
 
+## v1.7.1 SlaveInformation 配置补全
+
+- 按实际SSC界面原名和顺序列出13项。补齐厂商名称、分组、三类图标与Device Type，将Identity身份字段逐项展开；原名称/版本与Identity深链接保留。
+- 数字身份、目录元数据、BMP图标和Device Type分别建模。三个IMAGE页均有[图标转换工具](https://loogg.github.io/tool-ethercat-image/)入口，保留当前页并在新标签打开。
+- 配置检查器显示完整字段事实；版本相关`*_LEN`作为名称/版本项的补充说明，不假定各SSC版本界面完全相同。
+
+[本轮核对与验收](docs/acceptance/slave-information-coverage.md)
+
 ## v1.7.0 当前条目的访问与布局
 
 - 应用对象字典按当前工作表、对象和成员展示类型、默认值与逐项权限；生成SI0与原始单元格分开标注。

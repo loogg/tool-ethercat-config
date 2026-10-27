@@ -7,10 +7,10 @@ const contract=(id,title,summary,fields,relations,entryIds,extra={})=>({id,title
 export const relationTypes={generate:'参与生成',initialize:'初始化',reference:'引用',constrain:'约束',derive:'计算',describe:'概念对应'}
 export const crossSourceContracts=[
   contract('identity','设备身份','SSC 身份配置、ESI 匹配信息和 CoE Identity 需要一致；它们的作用和位置分别保留。',[
-    field('ssc','SSC','Vendor / Product / Revision / Serial','SlaveInformation › Identity','coe-identity'),
+    field('ssc','SSC','VENDOR_ID / PRODUCT_CODE / REVISION_NUMBER / SERIAL_NUMBER','SlaveInformation › 四个身份配置字段','coe-identity'),
     field('vendor','ESI','Vendor ID','EtherCATInfo › Vendor › Id','esi-vendor'),
     field('type','ESI','ProductCode / RevisionNo','Descriptions › Devices › Device › Type','esi-type'),
-  ],[link('ssc','vendor','generate','厂商身份描述','同一 SSC 工程生成 ESI 时核对；当前未绑定工程。'),link('ssc','type','generate','设备匹配描述','按选中 Device / Revision 核对，不跨设备混合。')],['coe-identity','esi-vendor','esi-type','esi-device']),
+  ],[link('ssc','vendor','generate','厂商身份描述','同一 SSC 工程生成 ESI 时核对；当前未绑定工程。'),link('ssc','type','generate','设备匹配描述','按选中 Device / Revision 核对，不跨设备混合。')],['vendor-id','product-code','revision-number','serial-number','coe-identity','esi-vendor','esi-type','esi-device']),
   contract('address','对象地址与成员引用','Index 和 SubIndex 是不同字段；工作表成员继承对象头索引，PDO Entry 再引用这一地址。',[
     field('app-index','APP','B · Index','应用工作表 › 对象头 › Index','xlsx-index'),
     field('app-si','APP','D · SI','应用工作表 › 对象成员 › SI','xlsx-si'),

@@ -1,4 +1,4 @@
-EtherCAT 配置查阅工具 v1.7.0
+EtherCAT 配置查阅工具 v1.7.1
 
 运行静态交付包
 
@@ -62,3 +62,7 @@ ESI保留当前Device/Revision/Module与XML字典偏移；DefaultData以小端�
 SSC能力项显示开关影响和关联规则，未载入Config.xml时工程值保持未知。
 CA从0/1、单项、逐项权限、布局问题与长数据分页均按当前来源解释。
 文件默认值不代表设备运行值；默认排列不代表已验证生成C结构体。
+
+v1.7.1 SlaveInformation按SSC原名和顺序列出13项，Identity作为关联对照保留。
+厂商/分组/设备图标分别定位ESI父级，三个IMAGE页均有图标转换工具链接。
+Device Type区分32bit值、Profile低16位和附加信息；名称/版本保留旧链接与版本相关长度说明。

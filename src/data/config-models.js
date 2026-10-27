@@ -1,7 +1,10 @@
 // Explicit review inventory. Adding a configuration requires a model decision;
 // a source label or a free-text relation does not decide its structure.
 const decisions = [
-  ['identity', '身份字段映射', '配置字段连接到 CoE / ESI / SII 身份，不把对象索引作为配置名。', ['coe-device-name', 'coe-hardware-version', 'coe-software-version', 'coe-identity', 'esi-vendor', 'esi-type', 'esi-name']],
+  ['identity', '身份字段映射', '配置字段连接到 CoE / ESI / SII 身份，不把对象索引作为配置名。', ['vendor-id', 'product-code', 'revision-number', 'serial-number', 'coe-device-name', 'coe-hardware-version', 'coe-software-version', 'coe-identity', 'esi-vendor', 'esi-type', 'esi-name']],
+  ['catalog-metadata', '目录显示元数据', '厂商名称与设备分组用于ESI可读显示和分类引用，不制造CoE对象或数值身份。', ['vendor-name','group-name']],
+  ['image-data', '图标数据与生成目标', '厂商、分组、设备图标分别绑定其ESI父级，区分BMP HEX与XML片段；转换工具作为外部操作入口。', ['vendor-image','group-image','device-image']],
+  ['device-type', 'Device Type与Profile位段', '完整32bit Device Type、低16bit Profile号和高16bit附加信息分别核对；不把5001写成0x5001。', ['device-profile-type']],
   ['include', '头文件引用', '表达公共声明或硬件适配头文件的代码引用；不假设有同值 ESI 字段。', ['system-header-file', 'hw-access-file']],
   ['callback', 'SDO回调流程', '函数名绑定对象读写处理路径；权限校验、完成/Abort和版本支持的Pending机制分别判断。', ['xlsx-coe-read', 'xlsx-coe-write']],
   ['access-model', '访问宽度与对齐', '区分 MCU 最小寻址单位、PDI 访问宽度、本地缓冲访问及对齐条件。', ['memory-unit-16bit', 'esc-16bit-access', 'esc-32bit-access', 'mbx-16bit-access', 'check-sm-param-alignment']],
