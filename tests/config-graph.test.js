@@ -4,6 +4,17 @@ import { entries, entryMap } from '../src/data/index.js'
 import { buildConfigGraph, filterConfigGraph, cycleScenario, capacityScenario, bufferScenario, layoutConfigGraph, relationKinds, NODE_WIDTH, NODE_HEIGHT, GROUP_WIDTH, GROUP_HEIGHT, matchGraphNode } from '../src/lib/config-graph.js'
 import { configModelProfiles, reviewedConfigurationIds } from '../src/data/config-models.js'
 
+test('Complete Access graph separates declarations, protocol SI0, local allocation and request-dependent prefixes',()=>{
+  const graph=buildConfigGraph(entryMap.get('complete-access-supported'),entries)
+  assert.equal(graph.profile.kind,'sdo-access')
+  assert.ok(graph.nodes.find(n=>n.id==='ca-si0').fields.some(f=>f.value==='8 bit'))
+  assert.ok(graph.nodes.find(n=>n.id==='ca-local').fields.some(f=>f.value==='16 bit'))
+  assert.equal(graph.nodes.find(n=>n.id==='ca-wire').fields.length,2)
+  assert.ok(graph.nodes.find(n=>n.id==='ca-xml').position.parent.includes('CoE'))
+  assert.ok(graph.nodes.find(n=>n.id===graph.rootId).fields.some(f=>f.value.includes('未知')))
+  assert.ok(!graph.nodes.some(n=>n.addressParts||n.name.includes('0x2002')))
+})
+
 test('cycle fixed value initializes exact CoE subindices, not ESI cycle settings', () => {
   const graph = buildConfigGraph(entryMap.get('min-pd-cycle-time'), entries, { cycleValue: '100000' })
   assert.equal(graph.scenario.microseconds, 100)

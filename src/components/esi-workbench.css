@@ -138,3 +138,5 @@
 .esi-mode-defaults code{font:11px var(--mono);color:#5276a4}
 .esi-mode-defaults strong{font:500 13px var(--font);color:#3f6999}
 .esi-mode-defaults button{display:flex;gap:4px;align-items:center;font-size:10px;color:#6d88ad;width:max-content;padding:1px 0;margin-top:2px}
+
+.esi-context-access-hint{display:flex;gap:12px;align-items:center;flex-wrap:wrap;border-left:2px solid #81a7d9;background:#f5f9fe;padding:9px 11px;margin:12px 0;color:#527297;font-size:11px}.esi-context-access-hint>span{flex:1;min-width:200px}.esi-context-access-hint small{display:block;font-size:10px;color:#70839b;margin-top:4px}.esi-context-access-hint button{display:flex;gap:7px;align-items:center;color:#2f65a6;font-size:11px;min-height:30px}.esi-context-access-hint code{font:11px var(--mono)}

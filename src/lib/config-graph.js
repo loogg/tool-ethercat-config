@@ -278,7 +278,27 @@ function legacyEdge(from, to, relation, i) {
   return edge(`recorded-${from.id}-${i}`, source, target, kind, label, relation.description, kind === 'context' ? '参考关系；此连线不表示同值或计算公式。' : '', from.references)
 }
 
+function completeAccessGraph(entry, entries) {
+  const byId=new Map(entries.map(item=>[item.id,item])),references=entry.references
+  const root={...entryNode(entry),fields:[{label:'类型',value:'能力开关 · 0 / 1'},{label:'工程值',value:'未载入 · 未知'}]}
+  const coe=entryNode(byId.get('coe-supported')),shape={...entryNode(byId.get('xlsx-object-code')),fields:[{label:'复合对象',value:'ARRAY / RECORD'},{label:'例外',value:'VARIABLE :00为变量值'}]}
+  const xml=extraNode('ca-xml','rule','CoE / @CompleteAccess','Device › Mailbox › CoE','向主站声明实际CA能力；声明不等于固件已经实现。',[{label:'来源',value:'ESI能力声明规则'},{label:'文件值',value:'进入ESI当前文件核对'}],{entryId:'esi-coe',position:{surface:'ESI',parent:'Device › Mailbox › CoE',selector:'@CompleteAccess'},references})
+  const protocol=extraNode('ca-si0','rule','SI0 · UNSIGNED8','ARRAY / RECORD › 子索引0','复合对象SI0的条目逻辑位长为8bit，VARIABLE的:00是独立变量值。',[{label:'协议位长',value:'8 bit'},{label:'单项访问',value:'1 Byte有效数据'}],{references})
+  const local=extraNode('ca-local','rule','UINT16 u16SubIndex0','SSC默认本地访问层','默认本地SI0保留16bit，让后续成员从WORD边界开始；实际C布局须核对。',[{label:'本地占位',value:'16 bit'},{label:'适用范围',value:'SSC默认访问层'}],{references})
+  const wire=extraNode('ca-wire','rule','CA从0 / CA从1','SDO对象数据 · 请求相关','CA从0包含SI0有效值与1Byte填充；CA从1省去这个2Byte前缀。实际长度按当前对象推导。',[{label:'CA从0',value:'SI0 1B + 填充1B + 子项'},{label:'CA从1',value:'子项；不带SI0前缀'}],{rules:['CA从SI2及以上开始的默认路径不支持，单项访问另行判断。','实际CA支持、运行SI0、逐项权限与自定义回调须核对。'],references})
+  const edges=[
+    edge('ca-coe',coe.id,root.id,'requires','CoE前提','CA属于CoE SDO能力，不能只声明ESI而没有对应固件实现。','能力规则，当前工程值未知',references),
+    edge('ca-declare',root.id,xml.id,'describes','声明与实现一致','ESI中的CompleteAccess须与工程实际能力一致，不把知识库示例当作当前文件值。','跨文件规则关系，未匹配实际工程',references),
+    edge('ca-shape',shape.id,protocol.id,'describes','复合对象SI0','ARRAY/RECORD使用SI0计数头；VARIABLE另按值类型处理。','对象组织规则',references),
+    edge('ca-memory',protocol.id,local.id,'describes','默认本地分配','8bit逻辑类型和16bit本地占位可以同时成立，不能按sizeof推断协议类型。','SSC默认访问层',references),
+    edge('ca-prefix',protocol.id,wire.id,'encodes','请求决定前缀','单项SI0为1Byte，CA从0在SI0后加1Byte填充，从1开始时不传这个前缀。','CA只允许从0或1开始',references),
+    edge('ca-gate',root.id,wire.id,'requires','能力与权限前提','启用CA仍须对象实现、当前访问范围、逐项权限与状态允许。','不能从宏值1推断实际访问成功',references),
+  ]
+  return {rootId:entry.id,nodes:[root,coe,xml,shape,protocol,local,wire],edges,sample:null,contextNote:'此图表达访问规则；打开“SDO能力与访问规则”可看分支，应用/ESI入口使用当前对象定义。',extraCount:0}
+}
+
 function createConfigGraph(entry, entries, { expanded = false, cycleValue = '100000', bitLengths = '16, 32', capacity = '16', memory = {} } = {}) {
+  if(entry.id==='complete-access-supported')return completeAccessGraph(entry,entries)
   if (['min-pd-cycle-time', 'pd-output-calc-and-copy-time', 'pd-input-calc-and-copy-time', 'pd-output-delay-time', 'pd-input-delay-time'].includes(entry.id)) return cycleGraph(entry, cycleValue, entries, expanded)
   if (['max-pd-output-size', 'max-pd-input-size'].includes(entry.id)) return capacityGraph(entry, bitLengths, capacity, expanded, memory)
   if (entry.id === 'esc-sm-wd-supported') return watchdogGraph(entry)

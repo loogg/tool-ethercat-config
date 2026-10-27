@@ -51,7 +51,7 @@ v1.2：APP 字段在[工作表与领域关联模型](application-definition-mode
 | MAX_PD_OUTPUT_SIZE | SSC / Application/ProcessData | PDO 容量与缓冲 | 活动位长→字节长度→容量约束；单缓冲跨度、三缓冲和最大容量预留分别计算。 |
 | MAILBOX_QUEUE | SSC / Mailbox | 组织与缓冲策略 | 表达静态/动态组织或资源分配策略，不与读写权限或协议容量混为一谈。 |
 | COE_SUPPORTED | SSC / Mailbox | 功能前提与能力 | 展示开启条件、相关声明与应用接入；开关不表示业务已经实现。 |
-| COMPLETE_ACCESS_SUPPORTED | SSC / Mailbox | 功能前提与能力 | 展示开启条件、相关声明与应用接入；开关不表示业务已经实现。 |
+| COMPLETE_ACCESS_SUPPORTED | SSC / Mailbox | SDO访问与占位 | 能力声明、对象组织、SI0协议8bit、默认本地16bit与CA0/1前缀分层；当前来源的真实字段另在工作台核对。 |
 | SEGMENTED_SDO_SUPPORTED | SSC / Mailbox | 功能前提与能力 | 展示开启条件、相关声明与应用接入；开关不表示业务已经实现。 |
 | SDO_RES_INTERFACE | SSC / Mailbox | 功能前提与能力 | 展示开启条件、相关声明与应用接入；开关不表示业务已经实现。 |
 | BACKUP_PARAMETER_SUPPORTED | SSC / Mailbox | 参数保存策略 | 区分运行值、备份标志、保存触发及存储实现，不能从标记推断已经落盘。 |
