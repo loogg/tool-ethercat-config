@@ -29,14 +29,14 @@
 
 | 项目 | 方法与预期 | 状态 |
 | --- | --- | --- |
-| 三层独立 | SI0描述保持8bit；SSC本地16bit；传输占位随请求派生，不改源字段 | 本地通过 |
-| 单项与CA | 单项SI0仅1Byte；CA0为SI0+零填充+SI1..n；CA1不含SI0且SI1载荷偏移0、本地偏移仍16bit | 本地通过 |
-| 合法性 | CA起点2/255为0x06010000；单项SI2可成功；无效数字不伪装成SDO Abort；VARIABLE路径正确 | 本地通过 |
-| 访问前提 | 读/写、CA支持、统一权限与允许状态分别校验；不作无条件成功演示 | 本地通过 |
-| 数据准确性 | 已知值按协议小端展示，填充不成为新SI，不自动加入PDO或假定整结构体可memcpy | 本地通过 |
-| 入口 | 应用SI0/对象、基础概念、SSC能力项、ESI能力字段都能打开共用模型，关闭恢复查阅 | 本地通过 |
-| 视觉交互 | 桌面和390px窄屏，字节/成员联动、切换、错误/恢复、键盘与弹窗关闭实际验证 | 本地通过 |
-| 交付 | 定向模型测试、原有回归、lint、构建、Pages子路径/静态包及发布核验 | 本地通过，待公开核验 |
+| 三层独立 | SI0描述保持8bit；SSC本地16bit；传输占位随请求派生，不改源字段 | 通过 |
+| 单项与CA | 单项SI0仅1Byte；CA0为SI0+零填充+SI1..n；CA1不含SI0且SI1载荷偏移0、本地偏移仍16bit | 通过 |
+| 合法性 | CA起点2/255为0x06010000；单项SI2可成功；无效数字不伪装成SDO Abort；VARIABLE路径正确 | 通过 |
+| 访问前提 | 读/写、CA支持、统一权限与允许状态分别校验；不作无条件成功演示 | 通过 |
+| 数据准确性 | 已知值按协议小端展示，填充不成为新SI，不自动加入PDO或假定整结构体可memcpy | 通过 |
+| 入口 | 应用SI0/对象、基础概念、SSC能力项、ESI能力字段都能打开共用模型，关闭恢复查阅 | 通过 |
+| 视觉交互 | 桌面和390px窄屏，字节/成员联动、切换、错误/恢复、键盘与弹窗关闭实际验证 | 通过 |
+| 交付 | 定向模型测试、原有回归、lint、构建、Pages子路径/静态包及发布核验 | 通过 |
 
 ## 2026-10-27 实现与本地核验
 
@@ -62,3 +62,13 @@
 
 
 子路径/静态包实际检查：4182模拟/tool-ethercat-config/，v1.6.0的动态JS/CSS加载正常，CA1为6Byte且SI1载荷/本地偏移0/2；解压目录不含node_modules，以包内脚本在4183启动，CA2中止而单项SI2为4Byte。控制台无warning/error。最终能力关闭显示“访问前提未满足”，未编造设备Abort码；同一前提下单项SI2仍可成功。
+
+
+## 公开交付
+
+- 代码提交36a9cfdb45c0aa0591e39b649892eb5184147ec1；[CI和Pages部署40432308633](https://github.com/loogg/tool-ethercat-config/actions/runs/40432308633)成功，Linux重新执行全部检查。
+- 线上35个静态文件逐个下载，SHA256与Pages候选全部相同，包含新的按需JS/CSS、原有Worker及许可资料。
+- 线上真实页面显示v1.6.0、SI0的UNSIGNED8/8bit与SSC UINT16占位；实际从CA0切换到CA1，载荷8→6Byte、填充消失、SI1的载荷/本地偏移0/2。控制台无warning/error；线上快照保留于artifacts/sdo-online-v1.6.0.png。
+- [公开概念场景](https://loogg.github.io/tool-ethercat-config/?v=1.6.0#/entry/learn-objects?collection=concepts&pane=detail&learnScene=sdo-access&learnStep=0)，[v1.6.0发布包](https://github.com/loogg/tool-ethercat-config/releases/tag/v1.6.0)。
+
+状态：三层模型、请求校验、四类入口、交互/视觉、静态包与公开部署均完成。本模型边界为独立教学对象与默认SSC占位说明，不提供真实设备访问或通用CA编解码器。
