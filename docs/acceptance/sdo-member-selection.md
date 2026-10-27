@@ -29,3 +29,12 @@
 [桌面SI2的4Byte载荷](sdo-member-selection/single-si2.png)、[手机SI1的2Byte载荷](sdo-member-selection/mobile-si1.png)。
 
 状态：本地完成，准备提交、发布和线上点选复验。
+
+
+发布结果：
+
+- 修复提交e19d6b2e2fefc5924d2a4697e54982e3610190c8；[CI与Pages部署40435120853](https://github.com/loogg/tool-ethercat-config/actions/runs/40435120853)成功。179项测试、lint、build均通过。
+- 下载线上35文件，与Pages候选逐个SHA256一致。线上真实页面确认v1.6.1，初始单项SI0为1Byte；点右侧SI2后起始SI=2、两侧选中:02、载荷4Byte且为12 34 56 78，单格43.27px。批量浏览器操作超时后读取实际页面并重新核对，未将超时当作通过。
+- [v1.6.1发布包](https://github.com/loogg/tool-ethercat-config/releases/tag/v1.6.1)已发布；本地审核4181继续可用。源字段协议类型及CA规则未改变。
+
+状态：成员请求联动、统一比例、交互/视觉、回归及公开部署核验完成。
